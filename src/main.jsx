@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrototypeProvider from './contexts/PrototypeProvider.jsx';
 import ViewModeProvider, { ViewModeRoot } from './contexts/ViewModeContext.jsx';
 import PrototypeWrapper from './PrototypeWrapper.jsx';
@@ -84,7 +84,7 @@ ReactDOM.createRoot(rootEl).render(
         <ViewModeRoot>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<PrototypeProvider conceptId={null}><App /></PrototypeProvider>} />
+              <Route path="/" element={<Navigate to="/prototype/document-package" replace />} />
               <Route path="/prototype" element={<PrototypeGallery />} />
               <Route path="/prototype/des-36" element={<ProjectHome allowDeleteProjectsAndDocuments prdOnboarding />} />
               <Route
@@ -100,6 +100,7 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/des-36-document-connection" element={<Des36DocumentConnection />} />
               <Route path="/prototype/megadocument" element={<Megadocument />} />
               <Route path="/prototype/document-package" element={<Megadocument2 />} />
+              <Route path="/prototype/megadocument-2" element={<Navigate to="/prototype/document-package" replace />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route path="/prototype/tool-library-mid-fi" element={<ProjectHome editorPrototypePath="/prototype/tool-library-mid-fi-editor" />} />
               <Route path="/prototype/:conceptId" element={<PrototypeWrapper />} />

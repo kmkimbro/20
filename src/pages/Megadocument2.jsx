@@ -22,6 +22,7 @@ export default function Megadocument2() {
       showDocumentLinksInSidebar={false}
       mergedPackageNavigation="toc-hub"
       mergedDocumentsSectionTitle="Document Packages"
+      seedDocumentPackageSample
     />
   );
 }

@@ -952,6 +952,44 @@ function normalizeProjectMergedDocs(raw) {
   return out;
 }
 
+function buildDocumentPackageSeed(saved) {
+  const hasProjects = Array.isArray(saved?.projects) && saved.projects.length > 0;
+  if (hasProjects) return null;
+  const ts = Date.now();
+  const projectId = 'p-doc-package-sample';
+  const docA = `d-${ts}-sample-a`;
+  const docB = `d-${ts}-sample-b`;
+  const megaId = `m-${ts}-sample`;
+  return {
+    projects: [{ id: projectId, name: 'Drone assembly' }],
+    selectedId: projectId,
+    view: 'project',
+    projectMainTab: 'documents',
+    projectDocs: {
+      [projectId]: [
+        { id: docA, name: 'Work instruction — Battery mount' },
+        { id: docB, name: 'Drawing — Battery tray rev C' },
+      ],
+    },
+    projectMergedDocuments: {
+      [projectId]: [
+        {
+          id: megaId,
+          editorDocName: 'Battery mount package',
+          sourceRefs: [
+            { projectId, docId: docA },
+            { projectId, docId: docB },
+          ],
+          sourceDocIds: [docA, docB],
+        },
+      ],
+    },
+    projectCadOnboarding: {
+      [projectId]: { phase: 'complete' },
+    },
+  };
+}
+
 function mergedDocsList(projectMergedDocs, projectId) {
   if (!projectId) return [];
   const v = projectMergedDocs?.[projectId];
@@ -2671,6 +2709,8 @@ export default function ProjectHome({
   mergedDocumentsSectionTitle = 'Merged documents',
   /** Megadocument 2: show Tool Library “Used in” pattern comparison rows for design review. */
   toolLibraryUsedInDesignReview = false,
+  /** Seed a starter package when this prototype has no saved data yet. */
+  seedDocumentPackageSample = false,
   /**
    * Megadocument empty-state prototype: when localStorage has no saved blob yet, start with no projects,
    * documents, or seeded tool rows. After the user adds data, the normal persist slot applies.
@@ -2696,12 +2736,13 @@ export default function ProjectHome({
   } catch {
     onboarding2Merged = projectConnectionGraph ? applyOnboarding2MockMerge(null) : null;
   }
-  const initialProjects = onboarding2Merged?.projects ?? saved?.projects ?? [];
+  const documentPackageSeed = seedDocumentPackageSample ? buildDocumentPackageSeed(savedSnapshot) : null;
+  const initialProjects = documentPackageSeed?.projects ?? onboarding2Merged?.projects ?? saved?.projects ?? [];
   const [projects, setProjects]         = useState(Array.isArray(initialProjects) ? initialProjects : []);
   const [selectedId, setSelectedId]     = useState(
-    onboarding2Merged?.selectedId ?? saved?.selectedId ?? null,
+    documentPackageSeed?.selectedId ?? onboarding2Merged?.selectedId ?? saved?.selectedId ?? null,
   );
-  const [view, setView]                 = useState(onboarding2Merged?.view ?? saved?.view ?? 'home'); // 'home' | 'project' | 'merged-package' | 'tool-library' | 'reusable-procedures' | 'parts-library' | 'doc-connections'
+  const [view, setView]                 = useState(documentPackageSeed?.view ?? onboarding2Merged?.view ?? saved?.view ?? 'home'); // 'home' | 'project' | 'merged-package' | 'tool-library' | 'reusable-procedures' | 'parts-library' | 'doc-connections'
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [partsAssemblyId, setPartsAssemblyId] = useState(() => {
     const sid = saved?.partsLibraryAssemblyId;
@@ -2709,16 +2750,16 @@ export default function ProjectHome({
   });
   const [editing, setEditing]           = useState(null);
   const [projectDocs, setProjectDocs]   = useState(() => (
-    normalizeProjectDocs(onboarding2Merged?.projectDocs ?? saved?.projectDocs ?? {})
+    normalizeProjectDocs(documentPackageSeed?.projectDocs ?? onboarding2Merged?.projectDocs ?? saved?.projectDocs ?? {})
   ));
   const [projectMergedDocs, setProjectMergedDocs] = useState(() => (
-    normalizeProjectMergedDocs(saved?.projectMergedDocuments ?? {})
+    normalizeProjectMergedDocs(documentPackageSeed?.projectMergedDocuments ?? saved?.projectMergedDocuments ?? {})
   ));
   const [projectCadOnboarding, setProjectCadOnboarding] = useState(
-    onboarding2Merged?.projectCadOnboarding ?? saved?.projectCadOnboarding ?? {},
+    documentPackageSeed?.projectCadOnboarding ?? onboarding2Merged?.projectCadOnboarding ?? saved?.projectCadOnboarding ?? {},
   );
   const [projectMainTab, setProjectMainTab] = useState(
-    () => onboarding2Merged?.projectMainTab ?? saved?.projectMainTab ?? 'documents',
+    () => documentPackageSeed?.projectMainTab ?? onboarding2Merged?.projectMainTab ?? saved?.projectMainTab ?? 'documents',
   );
   const [projectDocViewMode, setProjectDocViewMode] = useState(() => (
     saved?.projectDocViewMode && typeof saved.projectDocViewMode === 'object'
