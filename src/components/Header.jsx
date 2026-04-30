@@ -23,6 +23,17 @@ export default function Header({
 }) {
   const navigate = useNavigate();
   const [publishOpen, setPublishOpen] = useState(false);
+  const handleBackToProjects = () => {
+    if (backTo) {
+      navigate(backTo);
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/prototype/document-package');
+  };
 
   return (
     <header className="top-nav">
@@ -35,7 +46,7 @@ export default function Header({
             <button
               type="button"
               className="nav-btn nav-back"
-              onClick={() => navigate(backTo || -1)}
+              onClick={handleBackToProjects}
             >
               <ChevronLeft className="nav-icon" size={20} />
               Projects
