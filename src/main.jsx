@@ -99,7 +99,7 @@ ReactDOM.createRoot(rootEl).render(
               />
               <Route path="/prototype/des-36-document-connection" element={<Des36DocumentConnection />} />
               <Route path="/prototype/megadocument" element={<Megadocument />} />
-              <Route path="/prototype/megadocument-2" element={<Megadocument2 />} />
+              <Route path="/prototype/document-package" element={<Megadocument2 />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route path="/prototype/tool-library-mid-fi" element={<ProjectHome editorPrototypePath="/prototype/tool-library-mid-fi-editor" />} />
               <Route path="/prototype/:conceptId" element={<PrototypeWrapper />} />

@@ -73,10 +73,10 @@ export const PROTOTYPES = [
   },
   {
     id: 'megadocument-2',
-    title: 'Megadocument 2',
+    title: 'Document package',
     description:
       'Document-connection flow with its own save slot. Merged packages appear under their project in the rail; choosing one opens a package page in the main area with member files (normal editor per file; no combined mega-document).',
-    path: '/prototype/megadocument-2',
+    path: '/prototype/document-package',
   },
   {
     id: 'megadocument-empty',
