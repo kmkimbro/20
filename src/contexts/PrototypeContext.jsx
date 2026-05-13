@@ -12,6 +12,7 @@ const CONCEPT_MAP = {
   'des-combined': PlacedItem_Combined,
   'des-combined-2': PlacedItem_Combined,
   'des-combined-3': PlacedItem_Combined,
+  'des-57-procedures-v1-editor': PlacedItem_Combined,
 };
 
 export const PrototypeContext = createContext({
@@ -30,7 +31,7 @@ export function getPlacedItemComponent(conceptId) {
 
 /** Prototypes that share DES 53 behavior (screenshot capture, retake, etc.) */
 export function hasScreenshotCapture(conceptId) {
-  return conceptId === 'image-consolidated' || conceptId === 'des-53-v2' || conceptId === 'des-combined' || conceptId === 'des-combined-2' || conceptId === 'des-combined-3';
+  return conceptId === 'image-consolidated' || conceptId === 'des-53-v2' || conceptId === 'des-combined' || conceptId === 'des-combined-2' || conceptId === 'des-combined-3' || conceptId === 'des-57-procedures-v1-editor';
 }
 
 export { CONCEPT_MAP };

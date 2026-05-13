@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Home, Plus, Users, FolderOpen,
-  ChevronRight, ChevronDown, X, Library, Wrench, Trash2, Plug, Check,
-  LayoutGrid, List, Boxes, GitBranch, Sparkles, GitMerge, Layers, FileText, Link2,
-  ClipboardList, Upload,
+  ChevronRight, ChevronDown, X, Library, Wrench, Trash2, Plug, Check, SquarePen,
+  LayoutGrid, List, ListOrdered, Boxes, GitBranch, Sparkles, GitMerge, Layers, FileText, Link2,
+  Upload,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import PrototypeSwitcher from '../components/PrototypeSwitcher.jsx';
@@ -25,6 +25,9 @@ import { allPartLibraryRows } from '../lib/partsLibraryTable.js';
 import { applyOnboarding2MockMerge, MOCK_WELD_FRAME_PROJECT_ID } from '../data/onboarding2MockBootstrap.js';
 import { mockWeldFrameProject } from '../data/mockWeldFrameProjectGraph.js';
 import { ProjectConnectionGraphCanvas } from '../components/graph';
+import { loadProcedureState, saveProcedureState, procedureListFromState, countProcedureUses, normalizeProcedureName, deleteProcedureFromState, upsertProcedureInState } from '../lib/procedureStore.js';
+import { hasRichTextContent, stripProcedureRichText } from '../lib/procedureRichText.js';
+import ProcedureRichTextEditor from '../components/ProcedureRichTextEditor.jsx';
 
 function LayersPlusIcon({ size = 14, color = 'currentColor' }) {
   return (
@@ -98,7 +101,8 @@ function partsAssemblyIdForCadLabel(label) {
 }
 
 function editorHref(docName, empty = false, editorPath = DEFAULT_EDITOR_PATH, extra = {}) {
-  const nav = extra?.nav != null && extra.nav !== '' ? String(extra.nav) : 'cad';
+  const defaultNav = String(editorPath).includes('des-57-procedures-v1-editor') ? 'doc' : 'cad';
+  const nav = extra?.nav != null && extra.nav !== '' ? String(extra.nav) : defaultNav;
   const q = new URLSearchParams({ nav, docName });
   if (empty) q.set('empty', '1');
   Object.entries(extra).forEach(([k, v]) => {
@@ -351,9 +355,9 @@ function DocTile({
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             style={{
               position: 'absolute',
-              bottom: 6,
+              top: 6,
               right: 6,
-              zIndex: 2,
+              zIndex: 4,
               width: 28,
               height: 28,
               borderRadius: 6,
@@ -796,6 +800,20 @@ function visibleProjectDocList(projectDocs, projectId) {
   return projectDocList(projectDocs, projectId).filter((d) => !d?.uploaded);
 }
 
+function docCountPopoverNames(projectDocs, projectId, count, currentDocName) {
+  const docs = visibleProjectDocList(projectDocs, projectId).map((d) => d.name).filter(Boolean);
+  const unique = [];
+  docs.forEach((name) => {
+    if (!unique.includes(name)) unique.push(name);
+  });
+  const n = Math.max(0, Number(count) || 0);
+  if (n < 1) return unique;
+  while (unique.length < n) {
+    unique.push(`${currentDocName || 'Document'} ${unique.length + 1}`);
+  }
+  return unique.slice(0, n);
+}
+
 /** Drag payload for merge → project-owned package (toc-hub). */
 const MERGE_DOC_KEYS_DRAG_TYPE = 'application/x-q20-merge-doc-keys';
 /** Single document drag → drop onto an existing merged package (any project). */
@@ -953,41 +971,173 @@ function normalizeProjectMergedDocs(raw) {
 }
 
 function buildDocumentPackageSeed(saved) {
-  const hasProjects = Array.isArray(saved?.projects) && saved.projects.length > 0;
-  if (hasProjects) return null;
-  const ts = Date.now();
   const projectId = 'p-doc-package-sample';
-  const docA = `d-${ts}-sample-a`;
-  const docB = `d-${ts}-sample-b`;
-  const megaId = `m-${ts}-sample`;
+  const docA = 'd-doc-package-sample-a';
+  const docB = 'd-doc-package-sample-b';
+  const megaId = 'm-doc-package-sample';
+  const sampleProject = { id: projectId, name: 'Drone assembly' };
+  const sampleDocs = [
+    { id: docA, name: 'Work instruction — Battery mount' },
+    { id: docB, name: 'Drawing — Battery tray rev C' },
+  ];
+  const samplePackage = {
+    id: megaId,
+    editorDocName: 'Battery mount package',
+    sourceRefs: [
+      { projectId, docId: docA },
+      { projectId, docId: docB },
+    ],
+    sourceDocIds: [docA, docB],
+  };
+  const savedProjects = Array.isArray(saved?.projects) ? [...saved.projects] : [];
+  const hasSampleProject = savedProjects.some((p) => p?.id === projectId);
+  const projects = hasSampleProject ? savedProjects : [...savedProjects, sampleProject];
+  const savedProjectDocs = normalizeProjectDocs(saved?.projectDocs ?? {});
+  if (!Array.isArray(savedProjectDocs[projectId]) || savedProjectDocs[projectId].length < 1) {
+    savedProjectDocs[projectId] = sampleDocs;
+  }
+  const savedMergedDocs = normalizeProjectMergedDocs(saved?.projectMergedDocuments ?? {});
+  const existingPackages = Array.isArray(savedMergedDocs[projectId]) ? savedMergedDocs[projectId] : [];
+  if (!existingPackages.some((m) => m?.id === megaId)) {
+    savedMergedDocs[projectId] = [...existingPackages, samplePackage];
+  }
+  const savedCadOnboarding = { ...(saved?.projectCadOnboarding ?? {}) };
+  if (!savedCadOnboarding[projectId]) {
+    savedCadOnboarding[projectId] = { phase: 'complete' };
+  }
+  const openedDocs = Array.isArray(saved?.openedDocs) ? [...saved.openedDocs] : [];
+  for (const d of sampleDocs.map((doc) => doc.name)) {
+    if (!openedDocs.includes(d)) openedDocs.push(d);
+  }
+  const savedToolRefs = saved?.toolReferencesByDoc && typeof saved.toolReferencesByDoc === 'object'
+    ? { ...saved.toolReferencesByDoc }
+    : {};
+  if (!savedToolRefs['Work instruction — Battery mount']) {
+    savedToolRefs['Work instruction — Battery mount'] = {
+      'tool-screw': [
+        { pageId: 'op1', pageLabel: '1 Assemble mount bracket' },
+        { pageId: 'op2', pageLabel: '2 Torque fasteners' },
+      ],
+    };
+  }
+  if (!savedToolRefs['Drawing — Battery tray rev C']) {
+    savedToolRefs['Drawing — Battery tray rev C'] = {
+      'tool-screw': [
+        { pageId: 'op1', pageLabel: '1 Review mounting pattern' },
+      ],
+      'tool-glue': [
+        { pageId: 'op3', pageLabel: '3 Bond anti-vibration pad' },
+      ],
+    };
+  }
   return {
-    projects: [{ id: projectId, name: 'Drone assembly' }],
-    selectedId: projectId,
-    view: 'project',
-    projectMainTab: 'documents',
-    projectDocs: {
-      [projectId]: [
-        { id: docA, name: 'Work instruction — Battery mount' },
-        { id: docB, name: 'Drawing — Battery tray rev C' },
-      ],
-    },
-    projectMergedDocuments: {
-      [projectId]: [
-        {
-          id: megaId,
-          editorDocName: 'Battery mount package',
-          sourceRefs: [
-            { projectId, docId: docA },
-            { projectId, docId: docB },
-          ],
-          sourceDocIds: [docA, docB],
-        },
-      ],
-    },
-    projectCadOnboarding: {
-      [projectId]: { phase: 'complete' },
+    projects,
+    selectedId: saved?.selectedId ?? projectId,
+    view: saved?.view ?? 'project',
+    projectMainTab: saved?.projectMainTab ?? 'documents',
+    projectDocs: savedProjectDocs,
+    projectMergedDocuments: savedMergedDocs,
+    projectCadOnboarding: savedCadOnboarding,
+    openedDocs,
+    toolReferencesByDoc: savedToolRefs,
+  };
+}
+
+function buildStarterProjectDocumentSeed(saved) {
+  const projectId = 'p-starter-project';
+  const docId = 'd-starter-document';
+  const documentOnlyDocId = 'd-starter-document-only';
+  const starterProject = { id: projectId, name: 'Untitled project' };
+  const starterDoc = { id: docId, name: 'Untitled document' };
+  const documentOnlyDoc = {
+    id: documentOnlyDocId,
+    name: 'Document only',
+    prdCard: {
+      stateLabel: 'No CAD linked',
+      lastUpdated: '—',
+      documentLastEdited: 'Just now',
+      accentKey: 'no_cad',
+      operationCount: 0,
+      cadFileLabel: 'No CAD file linked',
     },
   };
+  const savedProjects = Array.isArray(saved?.projects) ? [...saved.projects] : [];
+  const projects = savedProjects.length > 0 ? savedProjects : [starterProject];
+  const selectedId = saved?.selectedId && projects.some((p) => p?.id === saved.selectedId)
+    ? saved.selectedId
+    : projects[0]?.id ?? projectId;
+  const savedProjectDocs = normalizeProjectDocs(saved?.projectDocs ?? {});
+  if (!Array.isArray(savedProjectDocs[selectedId]) || savedProjectDocs[selectedId].length < 1) {
+    savedProjectDocs[selectedId] = [
+      selectedId === projectId ? starterDoc : { ...starterDoc, id: `d-${Date.now()}` },
+    ];
+  }
+  if (!savedProjectDocs[selectedId].some((doc) => doc?.id === documentOnlyDocId)) {
+    savedProjectDocs[selectedId] = [...savedProjectDocs[selectedId], documentOnlyDoc];
+  }
+  const savedCadOnboarding = { ...(saved?.projectCadOnboarding ?? {}) };
+  if (!savedCadOnboarding[selectedId]) {
+    savedCadOnboarding[selectedId] = { phase: 'complete' };
+  }
+  return {
+    projects,
+    selectedId,
+    view: saved?.view ?? 'project',
+    projectMainTab: saved?.projectMainTab ?? 'documents',
+    projectDocs: savedProjectDocs,
+    projectCadOnboarding: savedCadOnboarding,
+  };
+}
+
+const MOCK_PROCEDURE_LIBRARY_PROCEDURES = [
+  {
+    id: 'proc-mock-disclaimer',
+    name: 'Disclaimer',
+    text: '<p>Confirm all setup steps are complete before running this procedure.</p>',
+  },
+  {
+    id: 'proc-mock-torque-sequence',
+    name: 'Torque sequence',
+    text: '<ol><li>Hand-tighten all fasteners.</li><li>Torque in a cross pattern.</li><li>Verify witness marks.</li></ol>',
+  },
+  {
+    id: 'proc-mock-inspection',
+    name: 'Final inspection',
+    text: '<p>Inspect the assembly for missing parts, loose hardware, and visible surface damage.</p>',
+  },
+];
+
+function seedProcedureLibraryMockState(state, docNames) {
+  const existingProcedures = procedureListFromState(state);
+  const nextProcedures = [...existingProcedures];
+  MOCK_PROCEDURE_LIBRARY_PROCEDURES.forEach((mock) => {
+    const exists = nextProcedures.some((p) => normalizeProcedureName(p.name).toLowerCase() === mock.name.toLowerCase());
+    if (!exists) {
+      nextProcedures.push({ ...mock, updatedAt: new Date().toISOString() });
+    }
+  });
+
+  const names = nextProcedures.map((p) => normalizeProcedureName(p.name)).filter(Boolean);
+  const docs = [...new Set((docNames || []).filter(Boolean))];
+  const targetDocs = docs.length > 0 ? docs : ['Untitled document', 'Document only'];
+  const refsByDoc = { ...(state?.procedureReferencesByDoc || {}) };
+
+  const addRef = (docName, procedureName, count) => {
+    if (!docName || !procedureName) return;
+    const refs = { ...(refsByDoc[docName] || {}) };
+    const existingKey = Object.keys(refs).find(
+      (key) => normalizeProcedureName(key).toLowerCase() === normalizeProcedureName(procedureName).toLowerCase(),
+    );
+    if (!existingKey) refs[procedureName] = count;
+    refsByDoc[docName] = refs;
+  };
+
+  addRef(targetDocs[0], names[0], 2);
+  addRef(targetDocs[0], names[1], 1);
+  addRef(targetDocs[1] || targetDocs[0], names[0], 1);
+  addRef(targetDocs[1] || targetDocs[0], names[2] || names[1], 3);
+
+  return { ...state, procedures: nextProcedures, procedureReferencesByDoc: refsByDoc };
 }
 
 function mergedDocsList(projectMergedDocs, projectId) {
@@ -1088,37 +1238,13 @@ const usedInChipStyle = {
   whiteSpace: 'nowrap',
 };
 
-function UsedInDesignReviewDocPopover({ open, onClose, title, flatDocs, grouped }) {
-  const [q, setQ] = useState('');
-  useEffect(() => {
-    if (open) setQ('');
-  }, [open]);
-
+function UsedInDesignReviewDocPopover({ open, onClose, title, flatDocs, grouped, getDocHref }) {
   useEffect(() => {
     if (!open) return;
     const h = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [open, onClose]);
-
-  const filteredFlat = useMemo(() => {
-    if (!flatDocs || grouped) return flatDocs;
-    const qq = q.trim().toLowerCase();
-    if (!qq) return flatDocs;
-    return flatDocs.filter((d) => d.toLowerCase().includes(qq));
-  }, [flatDocs, q, grouped]);
-
-  const filteredGrouped = useMemo(() => {
-    if (!grouped) return null;
-    const qq = q.trim().toLowerCase();
-    if (!qq) return grouped;
-    return grouped
-      .map((g) => ({
-        project: g.project,
-        docs: g.docs.filter((d) => d.toLowerCase().includes(qq)),
-      }))
-      .filter((g) => g.docs.length > 0);
-  }, [grouped, q]);
 
   if (!open) return null;
 
@@ -1177,64 +1303,61 @@ function UsedInDesignReviewDocPopover({ open, onClose, title, flatDocs, grouped 
             <X size={18} />
           </button>
         </div>
-        <div style={{ padding: '10px 16px', borderBottom: `1px solid ${C.cardBdr}` }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: '#FAFAFA',
-            border: `1px solid ${C.cardBdr}`,
-            borderRadius: 8,
-            padding: '6px 10px',
-          }}
-          >
-            <Search size={14} color={C.muted} />
-            <input
-              type="text"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Filter documents…"
-              style={{
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                fontSize: 13,
-                color: C.text,
-                width: '100%',
-              }}
-            />
-          </div>
-        </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px 16px' }}>
-          {grouped && filteredGrouped ? (
-            filteredGrouped.map((g) => (
-              <div key={g.project} style={{ marginBottom: 18 }}>
-                <div style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: C.muted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginBottom: 8,
-                }}
-                >
-                  {g.project}
-                  <span style={{ fontWeight: 500, marginLeft: 6 }}>({g.docs.length})</span>
+          {(() => {
+            const renderDoc = (d) => {
+              const href = typeof getDocHref === 'function' ? getDocHref(d) : null;
+              if (href) {
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: C.blue,
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                  >
+                    {d}
+                  </a>
+                );
+              }
+              return d;
+            };
+            if (grouped) {
+              return grouped.map((g) => (
+                <div key={g.project} style={{ marginBottom: 18 }}>
+                  <div style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    marginBottom: 8,
+                  }}
+                  >
+                    {g.project}
+                    <span style={{ fontWeight: 500, marginLeft: 6 }}>({g.docs.length})</span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.text, lineHeight: 1.55 }}>
+                    {g.docs.map((d) => (
+                      <li key={d}>{renderDoc(d)}</li>
+                    ))}
+                  </ul>
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.text, lineHeight: 1.55 }}>
-                  {g.docs.map((d) => (
-                    <li key={d}>{d}</li>
-                  ))}
-                </ul>
-              </div>
-            ))
-          ) : (
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.text, lineHeight: 1.55 }}>
-              {(filteredFlat || []).map((d) => (
-                <li key={d}>{d}</li>
-              ))}
-            </ul>
-          )}
+              ));
+            }
+            return (
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.text, lineHeight: 1.55 }}>
+                {(flatDocs || []).map((d) => (
+                  <li key={d}>{renderDoc(d)}</li>
+                ))}
+              </ul>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -1684,6 +1807,429 @@ function EmptyImportPanel({
 }
 
 /* ─── Parts Library view (table — CAD / part → documents) ───────────────── */
+function ProcedureLibraryView({ storageKey, refreshToken = 0, onAddProcedure, getDocHref }) {
+  const [state, setState] = useState(() => loadProcedureState(storageKey));
+  const [confirmDeleteProcedureId, setConfirmDeleteProcedureId] = useState(null);
+  const [editingProcedure, setEditingProcedure] = useState(null);
+  const [openProcedureUsesName, setOpenProcedureUsesName] = useState(null);
+  const editProcedureNameRef = useRef(null);
+
+  useEffect(() => {
+    if (!openProcedureUsesName) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpenProcedureUsesName(null);
+    };
+    const onDown = (e) => {
+      if (e.target.closest?.('.procedure-uses-popover') || e.target.closest?.('.procedure-uses-trigger')) return;
+      setOpenProcedureUsesName(null);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [openProcedureUsesName]);
+
+  useEffect(() => {
+    const refresh = () => setState(loadProcedureState(storageKey));
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [storageKey, refreshToken]);
+
+  const procedures = procedureListFromState(state);
+  const procedureToDelete = confirmDeleteProcedureId
+    ? procedures.find((p) => (p.id || p.name) === confirmDeleteProcedureId)
+    : null;
+
+  const openEditProcedure = (procedure) => {
+    setEditingProcedure({
+      id: procedure.id,
+      previousName: procedure.name,
+      name: procedure.name,
+      text: procedure.text || '',
+    });
+    setTimeout(() => editProcedureNameRef.current?.focus(), 0);
+  };
+
+  const closeEditProcedure = () => {
+    setEditingProcedure(null);
+  };
+
+  const saveEditedProcedure = () => {
+    if (!editingProcedure) return;
+    if (!hasRichTextContent(editingProcedure.text)) return;
+    const next = saveProcedureState(
+      (prev) => upsertProcedureInState(prev, {
+        id: editingProcedure.id,
+        name: editingProcedure.name,
+        text: editingProcedure.text,
+        previousName: editingProcedure.previousName,
+      }),
+      storageKey,
+    );
+    setState(next);
+    setEditingProcedure(null);
+  };
+
+  const removeProcedure = (procedure) => {
+    if (!procedure) return;
+    const next = saveProcedureState((prev) => deleteProcedureFromState(prev, procedure), storageKey);
+    setState(next);
+    setConfirmDeleteProcedureId(null);
+  };
+
+  const procedureRefs = (procedureName) => {
+    const target = normalizeProcedureName(procedureName).toLowerCase();
+    return Object.entries(state?.procedureReferencesByDoc || {})
+      .map(([docName, refs]) => {
+        const matchingKey = Object.keys(refs || {}).find(
+          (name) => normalizeProcedureName(name).toLowerCase() === target,
+        );
+        const count = matchingKey ? Number(refs[matchingKey]) || 0 : 0;
+        return count > 0 ? { docName, count } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.docName.localeCompare(b.docName));
+  };
+
+  return (
+    <div style={{ padding: '40px 44px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16 }}>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>Procedure Library</h2>
+          <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>
+            Saved procedure snippets from document text boxes. Usage counts update when procedures are inserted in documents.
+          </p>
+        </div>
+        {typeof onAddProcedure === 'function' ? (
+          <button
+            type="button"
+            onClick={onAddProcedure}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              flexShrink: 0,
+              background: C.blue,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 7,
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <Plus size={14} aria-hidden />
+            Add Procedures
+          </button>
+        ) : null}
+      </div>
+      {procedures.length === 0 ? (
+        <div style={{
+          background: '#fff',
+          border: `1px solid ${C.cardBdr}`,
+          borderRadius: 10,
+          padding: 24,
+          color: C.muted,
+          fontSize: 14,
+        }}
+        >
+          No procedures saved yet. Highlight text in a document text box and choose Convert to /procedure.
+        </div>
+      ) : (
+        <div style={{ background: '#fff', border: `1px solid ${C.cardBdr}`, borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 100px 72px', gap: 12, padding: '8px 16px', background: '#FAFAFA', borderBottom: `1px solid ${C.cardBdr}`, fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div>Name</div>
+            <div>Text</div>
+            <div>Used</div>
+            <div aria-hidden />
+          </div>
+          {procedures.map((p) => (
+            <div key={p.id || p.name} style={{ display: 'grid', gridTemplateColumns: '220px 1fr 100px 72px', gap: 12, padding: '12px 16px', borderBottom: `1px solid ${C.cardBdr}`, alignItems: 'start' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{p.name}</div>
+              <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.45 }}>{stripProcedureRichText(p.text)}</div>
+              {(() => {
+                const refs = procedureRefs(p.name);
+                const useCount = countProcedureUses(state, p.name);
+                const isOpen = openProcedureUsesName === p.name && refs.length > 0;
+                return (
+                  <div
+                    style={{ position: 'relative', fontSize: 13, fontWeight: 700, color: C.blue }}
+                  >
+                    <button
+                      type="button"
+                      disabled={refs.length === 0}
+                      className="procedure-uses-trigger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (refs.length === 0) return;
+                        setOpenProcedureUsesName((name) => (name === p.name ? null : p.name));
+                      }}
+                      style={{
+                        border: 'none',
+                        background: 'none',
+                        padding: 0,
+                        margin: 0,
+                        font: 'inherit',
+                        color: refs.length > 0 ? C.blue : C.blue,
+                        cursor: refs.length > 0 ? 'pointer' : 'default',
+                        textDecoration: refs.length > 0 ? 'underline' : 'none',
+                        textUnderlineOffset: 2,
+                      }}
+                    >
+                      {useCount}
+                      {' '}
+                      {useCount === 1 ? 'use' : 'uses'}
+                    </button>
+                    {isOpen ? (
+                      <div
+                        className="procedure-uses-popover"
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          zIndex: 20,
+                          marginTop: 8,
+                          minWidth: 220,
+                          maxWidth: 280,
+                          background: '#fff',
+                          border: `1px solid ${C.cardBdr}`,
+                          borderRadius: 10,
+                          boxShadow: '0 12px 32px rgba(15, 23, 42, 0.16)',
+                          padding: '10px 12px',
+                          color: C.text,
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: C.muted,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: 8,
+                        }}
+                        >
+                          Documents
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {refs.map((ref) => {
+                            const href = typeof getDocHref === 'function' ? getDocHref(ref.docName) : null;
+                            return href ? (
+                              <a
+                                key={ref.docName}
+                                href={href}
+                                style={{ fontSize: 13, fontWeight: 600, color: C.blue, textDecoration: 'none' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                              >
+                                {ref.docName}
+                                {ref.count > 1 ? ` (${ref.count})` : ''}
+                              </a>
+                            ) : (
+                              <span key={ref.docName} style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                                {ref.docName}
+                                {ref.count > 1 ? ` (${ref.count})` : ''}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => openEditProcedure(p)}
+                  title="Edit procedure"
+                  aria-label={`Edit ${p.name}`}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: C.muted,
+                    padding: 4,
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0.5,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; }}
+                >
+                  <SquarePen size={14} aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteProcedureId(p.id || p.name)}
+                  title="Delete procedure"
+                  aria-label={`Delete ${p.name}`}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: C.muted,
+                    padding: 4,
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0.5,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; }}
+                >
+                  <Trash2 size={14} aria-hidden />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editingProcedure ? (
+        <div className="ptb-procedure-modal" onClick={closeEditProcedure}>
+          <div
+            role="dialog"
+            aria-labelledby="procedure-library-edit-title"
+            className="ptb-procedure-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="ptb-procedure-modal-header">
+              <span id="procedure-library-edit-title" className="ptb-procedure-modal-title">
+                Edit procedure
+              </span>
+              <button
+                type="button"
+                className="ptb-procedure-modal-close"
+                aria-label="Close"
+                onClick={closeEditProcedure}
+              >
+                <X size={18} aria-hidden />
+              </button>
+            </div>
+            <div className="ptb-procedure-modal-body">
+              <label className="ptb-procedure-modal-field" htmlFor="procedure-library-edit-name">
+                Procedure name
+                <input
+                  id="procedure-library-edit-name"
+                  ref={editProcedureNameRef}
+                  value={editingProcedure.name}
+                  onChange={(e) => setEditingProcedure((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </label>
+              <label className="ptb-procedure-modal-field" htmlFor="procedure-library-edit-text">
+                Procedure text
+                <ProcedureRichTextEditor
+                  id="procedure-library-edit-text"
+                  value={editingProcedure.text}
+                  onChange={(html) => setEditingProcedure((prev) => ({ ...prev, text: html }))}
+                />
+              </label>
+            </div>
+            <div className="ptb-procedure-modal-actions">
+              <button
+                type="button"
+                className="ptb-procedure-modal-btn ptb-procedure-modal-btn--secondary"
+                onClick={closeEditProcedure}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ptb-procedure-modal-btn ptb-procedure-modal-btn--primary"
+                onClick={saveEditedProcedure}
+                disabled={!hasRichTextContent(editingProcedure.text)}
+              >
+                Save procedure
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {procedureToDelete ? (
+        <div
+          onClick={() => setConfirmDeleteProcedureId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: '28px 28px 22px',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
+              maxWidth: 380,
+              width: '90%',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <Trash2 size={18} color="#EF4444" />
+              <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Delete procedure?</span>
+            </div>
+            <p style={{ fontSize: 14, color: C.sub, margin: '0 0 22px', lineHeight: 1.5 }}>
+              Deleting <strong style={{ color: C.text }}>{procedureToDelete.name || 'this procedure'}</strong> will remove it from the library. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteProcedureId(null)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 7,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  border: `1px solid ${C.cardBdr}`,
+                  background: '#fff',
+                  color: C.text,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => removeProcedure(procedureToDelete)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 7,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  border: 'none',
+                  background: '#EF4444',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Delete procedure
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ─── Parts Library view (table — CAD / part → documents) ───────────────── */
 function PartsLibraryView({
   storageKey = DEFAULT_DES36_STORAGE_KEY,
   navigate,
@@ -1935,7 +2481,12 @@ function ToolLibraryView({
   showUsedInDesignReview = false,
   preferEmptyToolLibrary = false,
   requestOpenAddToolModal = 0,
+  editorPrototypePath = DEFAULT_EDITOR_PATH,
+  usedInStyle = 'chips',
 }) {
+  const location = useLocation();
+  const returnToPath = location?.pathname || '';
+  const [usedInPopover, setUsedInPopover] = useState(null);
   const pickToolsFromStorage = (lib) => {
     if (lib.toolLibrary?.length) return lib.toolLibrary;
     return preferEmptyToolLibrary ? [] : [...TOOLS_BOM_INITIAL];
@@ -1947,6 +2498,9 @@ function ToolLibraryView({
   });
   // openedDocs: every document name that has ever been opened in the editor
   const [openedDocs, setOpenedDocs] = useState(() => loadToolLibraryState(storageKey).openedDocs || []);
+  const [toolReferencesByDoc, setToolReferencesByDoc] = useState(() => (
+    loadToolLibraryState(storageKey).toolReferencesByDoc || {}
+  ));
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
   const [addToolModalOpen, setAddToolModalOpen] = useState(false);
@@ -1954,9 +2508,12 @@ function ToolLibraryView({
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [csvImportNotice, setCsvImportNotice] = useState(null);
   const addInputRef = useRef(null);
   const addToolModalInputRef = useRef(null);
   const editInputRef = useRef(null);
+  const csvInputRef = useRef(null);
+  const csvNoticeTimerRef = useRef(null);
 
   // Refresh from localStorage on mount and on window focus (user may have come back from the editor)
   useEffect(() => {
@@ -1964,14 +2521,30 @@ function ToolLibraryView({
       const s = loadToolLibraryState(storageKey);
       setTools(pickToolsFromStorage(s));
       setOpenedDocs(s.openedDocs || []);
+      setToolReferencesByDoc(s.toolReferencesByDoc || {});
     };
     refresh();
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [storageKey, preferEmptyToolLibrary]);
 
-  // All tools appear in every opened document — return the full openedDocs list for every tool
-  const usedInForTool = () => openedDocs;
+  const usedInForTool = useCallback((toolId) => {
+    const docsFromReferences = Object.entries(toolReferencesByDoc || {})
+      .map(([docName, refsByTool]) => {
+        const pages = Array.isArray(refsByTool?.[toolId]) ? refsByTool[toolId] : [];
+        if (pages.length < 1) return null;
+        return {
+          docName,
+          pages: [...pages].sort((a, b) => String(a.pageLabel || '').localeCompare(String(b.pageLabel || ''))),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.docName.localeCompare(b.docName));
+    if (docsFromReferences.length > 0) return docsFromReferences;
+    return [...(openedDocs || [])]
+      .sort((a, b) => String(a).localeCompare(String(b)))
+      .map((docName) => ({ docName, pages: [] }));
+  }, [toolReferencesByDoc, openedDocs]);
 
   const filtered = tools.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase())
@@ -2035,6 +2608,107 @@ function ToolLibraryView({
     setTimeout(() => addToolModalInputRef.current?.focus(), 0);
   }, []);
 
+  const showCsvNotice = useCallback((notice) => {
+    if (csvNoticeTimerRef.current) {
+      clearTimeout(csvNoticeTimerRef.current);
+      csvNoticeTimerRef.current = null;
+    }
+    setCsvImportNotice(notice);
+    if (notice && notice.kind !== 'error') {
+      csvNoticeTimerRef.current = setTimeout(() => {
+        setCsvImportNotice(null);
+        csvNoticeTimerRef.current = null;
+      }, 5000);
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (csvNoticeTimerRef.current) clearTimeout(csvNoticeTimerRef.current);
+  }, []);
+
+  const openCsvPicker = useCallback(() => {
+    csvInputRef.current?.click();
+  }, []);
+
+  const handleCsvFile = useCallback((event) => {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    const filename = file.name;
+    const reader = new FileReader();
+    reader.onerror = () => {
+      showCsvNotice({ kind: 'error', text: `Could not read “${filename}”.` });
+      input.value = '';
+    };
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      // Strip BOM, split on newline (handles \r\n / \r / \n).
+      const cleaned = text.replace(/^\uFEFF/, '');
+      const rawRows = cleaned.split(/\r\n|\r|\n/).map((r) => r.trim()).filter((r) => r.length > 0);
+      const firstColumn = (line) => {
+        // Minimal CSV: first column only. Handle a quoted first value with embedded commas.
+        if (line.startsWith('"')) {
+          let i = 1;
+          let out = '';
+          while (i < line.length) {
+            const ch = line[i];
+            if (ch === '"' && line[i + 1] === '"') { out += '"'; i += 2; continue; }
+            if (ch === '"') { i += 1; break; }
+            out += ch;
+            i += 1;
+          }
+          return out.trim();
+        }
+        const idx = line.indexOf(',');
+        const v = idx === -1 ? line : line.slice(0, idx);
+        return v.trim();
+      };
+      const candidates = rawRows.map(firstColumn).filter((v) => v.length > 0);
+      // Skip a header row if it looks like a label (e.g. "Name", "Tool", "Tool name").
+      const headerLooking = candidates.length > 0
+        && /^(name|tool|tool[\s_-]?name|tools?)$/i.test(candidates[0]);
+      const wanted = headerLooking ? candidates.slice(1) : candidates;
+      if (wanted.length === 0) {
+        showCsvNotice({
+          kind: 'error',
+          text: `“${filename}” didn’t contain any tool names. Use one tool per line, or a CSV with a Name column.`,
+        });
+        input.value = '';
+        return;
+      }
+      let added = 0;
+      let skipped = 0;
+      setTools((prev) => {
+        const existing = new Map(
+          prev.map((t) => [(t?.name ?? '').toString().trim().toLowerCase(), t]),
+        );
+        const seenNew = new Set();
+        const next = [...prev];
+        wanted.forEach((name) => {
+          const key = name.toLowerCase();
+          if (existing.has(key) || seenNew.has(key)) {
+            skipped += 1;
+            return;
+          }
+          seenNew.add(key);
+          next.push({ id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name });
+          added += 1;
+        });
+        if (added > 0) saveToolLibraryState((s) => ({ ...s, toolLibrary: next }), storageKey);
+        return added > 0 ? next : prev;
+      });
+      const parts = [];
+      parts.push(`${added} tool${added === 1 ? '' : 's'} imported`);
+      if (skipped > 0) parts.push(`${skipped} duplicate${skipped === 1 ? '' : 's'} skipped`);
+      showCsvNotice({
+        kind: added > 0 ? 'success' : 'info',
+        text: `${parts.join(' · ')} from “${filename}”.`,
+      });
+      input.value = '';
+    };
+    reader.readAsText(file);
+  }, [showCsvNotice, storageKey]);
+
   useEffect(() => {
     if (requestOpenAddToolModal <= 0) return;
     openAddToolModal();
@@ -2053,27 +2727,92 @@ function ToolLibraryView({
           </p>
         </div>
         {!(preferEmptyToolLibrary && tools.length === 0) ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (preferEmptyToolLibrary) openAddToolModal();
-              else {
-                setAdding(true);
-                setTimeout(() => addInputRef.current?.focus(), 0);
-              }
-            }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: C.blue, color: '#fff', border: 'none',
-              borderRadius: 7, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            <Plus size={14} />
-            Add tool
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={openCsvPicker}
+              title="Upload a CSV (one tool name per row, or a CSV with a Name column)"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: '#fff', color: C.text,
+                border: `1px solid ${C.cardBdr}`,
+                borderRadius: 7, padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <Upload size={14} />
+              Upload CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (preferEmptyToolLibrary) openAddToolModal();
+                else {
+                  setAdding(true);
+                  setTimeout(() => addInputRef.current?.focus(), 0);
+                }
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: C.blue, color: '#fff', border: 'none',
+                borderRadius: 7, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <Plus size={14} />
+              Add tool
+            </button>
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleCsvFile}
+              style={{ display: 'none' }}
+            />
+          </div>
         ) : null}
       </div>
+
+      {csvImportNotice ? (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 14px',
+            marginBottom: 18,
+            borderRadius: 8,
+            border: `1px solid ${
+              csvImportNotice.kind === 'error' ? '#FECACA'
+                : csvImportNotice.kind === 'success' ? '#BBF7D0'
+                  : C.cardBdr
+            }`,
+            background: csvImportNotice.kind === 'error' ? '#FEF2F2'
+              : csvImportNotice.kind === 'success' ? '#F0FDF4'
+                : '#F8FAFC',
+            color: csvImportNotice.kind === 'error' ? '#991B1B'
+              : csvImportNotice.kind === 'success' ? '#065F46'
+                : C.text,
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          <span>{csvImportNotice.text}</span>
+          <button
+            type="button"
+            onClick={() => setCsvImportNotice(null)}
+            aria-label="Dismiss"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'inherit', padding: 4, borderRadius: 4, display: 'flex',
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : null}
 
       {showUsedInDesignReview && !(preferEmptyToolLibrary && tools.length === 0) ? (
         <ToolLibraryUsedInDesignReviewDemo />
@@ -2219,22 +2958,57 @@ function ToolLibraryView({
                   </span>
                 )}
                 {/* Used in documents */}
-                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {usedInForTool(tool.id).length === 0 ? (
-                    <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>Not used in any document</span>
-                  ) : usedInForTool(tool.id).map(docName => (
-                    <span
-                      key={docName}
-                      style={{
-                        fontSize: 11, fontWeight: 500,
-                        background: C.blueLight, color: C.blue,
-                        borderRadius: 20, padding: '2px 9px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {docName}
-                    </span>
-                  ))}
+                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                  {(() => {
+                    const refs = usedInForTool(tool.id);
+                    if (refs.length === 0) {
+                      return (
+                        <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
+                          Not used in any document
+                        </span>
+                      );
+                    }
+                    if (usedInStyle === 'count-list') {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setUsedInPopover({
+                            title: `Documents using “${tool.name}”`,
+                            flatDocs: refs.map((r) => r.docName),
+                          })}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: C.blue,
+                            textDecoration: 'underline',
+                            textUnderlineOffset: 2,
+                          }}
+                        >
+                          {refs.length}
+                          {' '}
+                          {refs.length === 1 ? 'document' : 'documents'}
+                        </button>
+                      );
+                    }
+                    return refs.map((docRef) => (
+                      <span
+                        key={docRef.docName}
+                        style={{
+                          fontSize: 11, fontWeight: 500,
+                          background: C.blueLight, color: C.blue,
+                          borderRadius: 20, padding: '2px 9px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {docRef.docName}
+                      </span>
+                    ));
+                  })()}
                 </div>
                 <button
                   onClick={() => confirmRemoveTool(tool.id)}
@@ -2384,6 +3158,79 @@ function ToolLibraryView({
             <p style={{ fontSize: 14, color: C.sub, margin: '0 0 22px', lineHeight: 1.5 }}>
               Deleting <strong style={{ color: C.text }}>{toolToDelete.name || 'this tool'}</strong> will remove it from all documents. This cannot be undone.
             </p>
+            {(() => {
+              const references = usedInForTool(confirmDeleteId);
+              return (
+                <div style={{
+                  margin: '0 0 18px',
+                  maxHeight: 220,
+                  overflow: 'auto',
+                  border: `1px solid ${C.cardBdr}`,
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  background: '#F8FAFC',
+                }}
+                >
+                  <div style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: 8,
+                  }}
+                  >
+                    References
+                  </div>
+                  {references.length < 1 ? (
+                    <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>
+                      Not referenced in any document.
+                    </div>
+                  ) : references.map((docRef) => {
+                    const href = editorHref(docRef.docName, false, editorPrototypePath, {
+                      nav: 'doc',
+                      ...(returnToPath ? { returnTo: returnToPath } : {}),
+                    });
+                    return (
+                      <div key={docRef.docName} style={{ marginBottom: 9 }}>
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 13, fontWeight: 600, color: C.blue, textDecoration: 'none' }}
+                        >
+                          {docRef.docName}
+                        </a>
+                        {docRef.pages.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                            {docRef.pages.map((page, idx) => (
+                              <a
+                                key={`${docRef.docName}:${page.pageId || idx}`}
+                                href={href}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: '#4338CA',
+                                  background: '#EEF2FF',
+                                  border: '1px solid #C7D2FE',
+                                  borderRadius: 999,
+                                  padding: '3px 8px',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                {page.pageLabel}
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setConfirmDeleteId(null)}
@@ -2409,6 +3256,18 @@ function ToolLibraryView({
           </div>
         </div>
       )}
+
+      <UsedInDesignReviewDocPopover
+        open={usedInPopover != null}
+        onClose={() => setUsedInPopover(null)}
+        title={usedInPopover?.title ?? ''}
+        flatDocs={usedInPopover?.flatDocs}
+        grouped={null}
+        getDocHref={(name) => editorHref(name, false, editorPrototypePath, {
+          nav: 'doc',
+          ...(returnToPath ? { returnTo: returnToPath } : {}),
+        })}
+      />
     </div>
   );
 }
@@ -2685,6 +3544,8 @@ function PrdDocTableStatusStack({ prd }) {
 
 export default function ProjectHome({
   editorPrototypePath = DEFAULT_EDITOR_PATH,
+  editorDefaultNav = 'cad',
+  initialView = null,
   allowDeleteProjectsAndDocuments = false,
   prdOnboarding = false,
   storageKey = DEFAULT_DES36_STORAGE_KEY,
@@ -2694,10 +3555,18 @@ export default function ProjectHome({
   documentConnectionShowSandboxBanner = true,
   /** When false, hide the sidebar Parts section and Parts library view (not used with projectConnectionGraph). */
   showPartsSidebarSection = true,
+  /** When false, hide the “Reusable Procedures” entry from the left rail. */
+  showReusableProceduresInSidebar = true,
+  /** When true, show the new Procedure Library entry and page. */
+  showProcedureLibraryInSidebar = false,
+  /** When false, hide the “Parts Library” entry from the left rail. */
+  showPartsLibraryInSidebar = true,
   /** When false, hide PRD document card footers (operations + Link…) and per-card / list-row link affordances. */
   showDocumentCardFooter = true,
   /** When false, hide the sidebar “Document links” entry and the full-screen links workspace (document-connection mode). */
   showDocumentLinksInSidebar = true,
+  /** When false, hide the welcome-page “Try sample project + links” CTA in document-connection prototypes. */
+  showDocumentConnectionSampleCta = true,
   /** When true (DES 36 Onboarding 2), seed mock weld project + connection graph tab inside the project. */
   projectConnectionGraph = false,
   /**
@@ -2709,8 +3578,30 @@ export default function ProjectHome({
   mergedDocumentsSectionTitle = 'Merged documents',
   /** Megadocument 2: show Tool Library “Used in” pattern comparison rows for design review. */
   toolLibraryUsedInDesignReview = false,
+  /**
+   * Render style for the Tool Library “Used in” column.
+   *  - 'chips'      (default) — chip per document, wrap.
+   *  - 'count-list' (Concept C) — clickable “{N} documents” link → popover list.
+   */
+  toolLibraryUsedInStyle = 'chips',
   /** Seed a starter package when this prototype has no saved data yet. */
   seedDocumentPackageSample = false,
+  /** Seed a simple starter project with one document, without tools/plugins/packages. */
+  seedStarterProjectDocument = false,
+  /** Shared storage key for procedures (passed into the editor and Procedure Library). */
+  procedureStorageKey = null,
+  /** DES 57 demo seed: sample Procedure Library rows + usage counts. */
+  seedProcedureLibraryMockData = false,
+  /** When false, hide the entire Document Packages workflow (project view section, sidebar nesting, TOC hub, merge selection, package badges). */
+  documentPackagesEnabled = true,
+  /** When true, PRD doc cards show CAD file name on its own line with “Linked — {lastUpdated}” underneath (DES 36 MVP layout). */
+  documentCardLinkedCaption = false,
+  /** When false, hide the CAD link / “In sync” status pill on PRD doc cards (DES 36 MVP). */
+  documentCardShowStatusTag = true,
+  /** Where the “New Project” button appears in the left rail: `'top'` (above the list, default) or `'bottom'` (after the list). */
+  newProjectButtonPlacement = 'top',
+  /** When true, render each project’s documents as collapsible rows under the project in the left rail (DES 36 MVP). */
+  showDocumentsUnderProjectInSidebar = false,
   /**
    * Megadocument empty-state prototype: when localStorage has no saved blob yet, start with no projects,
    * documents, or seeded tool rows. After the user adds data, the normal persist slot applies.
@@ -2720,6 +3611,14 @@ export default function ProjectHome({
   const navigate = useNavigate();
   const location = useLocation();
   const showDocLinkOnCards = documentConnectionSandbox && showDocumentCardFooter;
+  const editorExtraParams = useMemo(() => ({
+    ...(editorDefaultNav ? { nav: editorDefaultNav } : {}),
+    ...(procedureStorageKey ? { procedureStorageKey } : {}),
+    ...(procedureStorageKey ? { returnTo: location.pathname } : {}),
+  }), [editorDefaultNav, procedureStorageKey, location.pathname]);
+  const docEditorHref = useCallback((docName, extra = {}) => (
+    editorHref(docName, false, editorPrototypePath, { ...editorExtraParams, ...extra })
+  ), [editorPrototypePath, editorExtraParams]);
 
   const openPartsMapForCad = useCallback((cadLabel) => {
     if (projectConnectionGraph || !showPartsSidebarSection) return;
@@ -2737,12 +3636,13 @@ export default function ProjectHome({
     onboarding2Merged = projectConnectionGraph ? applyOnboarding2MockMerge(null) : null;
   }
   const documentPackageSeed = seedDocumentPackageSample ? buildDocumentPackageSeed(savedSnapshot) : null;
-  const initialProjects = documentPackageSeed?.projects ?? onboarding2Merged?.projects ?? saved?.projects ?? [];
+  const starterProjectSeed = seedStarterProjectDocument ? buildStarterProjectDocumentSeed(savedSnapshot) : null;
+  const initialProjects = documentPackageSeed?.projects ?? starterProjectSeed?.projects ?? onboarding2Merged?.projects ?? saved?.projects ?? [];
   const [projects, setProjects]         = useState(Array.isArray(initialProjects) ? initialProjects : []);
   const [selectedId, setSelectedId]     = useState(
-    documentPackageSeed?.selectedId ?? onboarding2Merged?.selectedId ?? saved?.selectedId ?? null,
+    documentPackageSeed?.selectedId ?? starterProjectSeed?.selectedId ?? onboarding2Merged?.selectedId ?? saved?.selectedId ?? null,
   );
-  const [view, setView]                 = useState(documentPackageSeed?.view ?? onboarding2Merged?.view ?? saved?.view ?? 'home'); // 'home' | 'project' | 'merged-package' | 'tool-library' | 'reusable-procedures' | 'parts-library' | 'doc-connections'
+  const [view, setView]                 = useState(initialView ?? documentPackageSeed?.view ?? starterProjectSeed?.view ?? onboarding2Merged?.view ?? saved?.view ?? 'home'); // 'home' | 'project' | 'merged-package' | 'tool-library' | 'reusable-procedures' | 'parts-library' | 'doc-connections'
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [partsAssemblyId, setPartsAssemblyId] = useState(() => {
     const sid = saved?.partsLibraryAssemblyId;
@@ -2750,16 +3650,16 @@ export default function ProjectHome({
   });
   const [editing, setEditing]           = useState(null);
   const [projectDocs, setProjectDocs]   = useState(() => (
-    normalizeProjectDocs(documentPackageSeed?.projectDocs ?? onboarding2Merged?.projectDocs ?? saved?.projectDocs ?? {})
+    normalizeProjectDocs(documentPackageSeed?.projectDocs ?? starterProjectSeed?.projectDocs ?? onboarding2Merged?.projectDocs ?? saved?.projectDocs ?? {})
   ));
   const [projectMergedDocs, setProjectMergedDocs] = useState(() => (
     normalizeProjectMergedDocs(documentPackageSeed?.projectMergedDocuments ?? saved?.projectMergedDocuments ?? {})
   ));
   const [projectCadOnboarding, setProjectCadOnboarding] = useState(
-    documentPackageSeed?.projectCadOnboarding ?? onboarding2Merged?.projectCadOnboarding ?? saved?.projectCadOnboarding ?? {},
+    documentPackageSeed?.projectCadOnboarding ?? starterProjectSeed?.projectCadOnboarding ?? onboarding2Merged?.projectCadOnboarding ?? saved?.projectCadOnboarding ?? {},
   );
   const [projectMainTab, setProjectMainTab] = useState(
-    () => documentPackageSeed?.projectMainTab ?? onboarding2Merged?.projectMainTab ?? saved?.projectMainTab ?? 'documents',
+    () => documentPackageSeed?.projectMainTab ?? starterProjectSeed?.projectMainTab ?? onboarding2Merged?.projectMainTab ?? saved?.projectMainTab ?? 'documents',
   );
   const [projectDocViewMode, setProjectDocViewMode] = useState(() => (
     saved?.projectDocViewMode && typeof saved.projectDocViewMode === 'object'
@@ -2782,6 +3682,11 @@ export default function ProjectHome({
   const [hoveredProjectId, setHoveredProjectId] = useState(null);
   const [collapsedProjectIds, setCollapsedProjectIds] = useState(() => new Set());
   const [addPluginModalOpen, setAddPluginModalOpen] = useState(false);
+  const [addProcedureModalOpen, setAddProcedureModalOpen] = useState(false);
+  const [newProcedureName, setNewProcedureName] = useState('');
+  const [newProcedureText, setNewProcedureText] = useState('');
+  const [procedureLibraryRevision, setProcedureLibraryRevision] = useState(0);
+  const addProcedureNameRef = useRef(null);
   /** Increment from home empty “Add tool” so Tool Library opens its add modal after navigation. */
   const [homeToolModalRequest, setHomeToolModalRequest] = useState(0);
   /** Selection keys `projectId\\tdocId` — supports cross-project merge (toc-hub). */
@@ -2813,6 +3718,8 @@ export default function ProjectHome({
       return false;
     }
   });
+  const seededToolRefsRef = useRef(false);
+  const seededProcedureMockRef = useRef(false);
 
   const projectsSafe = Array.isArray(projects) ? projects : [];
 
@@ -2820,11 +3727,41 @@ export default function ProjectHome({
     const params = new URLSearchParams(location.search);
     const projectIdParam = params.get('projectId');
     const viewParam = params.get('view');
+    if (viewParam === 'procedure-library') {
+      setSelectedId(null);
+      setView('procedure-library');
+      return;
+    }
     if (!projectIdParam) return;
     if (!projectsSafe.some((p) => p.id === projectIdParam)) return;
     setSelectedId(projectIdParam);
     if (viewParam === 'project') setView('project');
   }, [location.search, projectsSafe]);
+
+  useEffect(() => {
+    if (!seedDocumentPackageSample) return;
+    if (!documentPackageSeed || seededToolRefsRef.current) return;
+    const existingState = loadToolLibraryState(storageKey);
+    const hasRefs = existingState?.toolReferencesByDoc
+      && Object.keys(existingState.toolReferencesByDoc).length > 0;
+    if (hasRefs) return;
+    mergePersistState({
+      openedDocs: documentPackageSeed.openedDocs || [],
+      toolReferencesByDoc: documentPackageSeed.toolReferencesByDoc || {},
+    }, storageKey);
+    seededToolRefsRef.current = true;
+  }, [seedDocumentPackageSample, documentPackageSeed, storageKey]);
+
+  useEffect(() => {
+    if (!seedProcedureLibraryMockData || !procedureStorageKey || seededProcedureMockRef.current) return;
+    const docNames = Object.values(projectDocs)
+      .flatMap((docs) => (Array.isArray(docs) ? docs : []))
+      .map((doc) => doc?.name)
+      .filter(Boolean);
+    saveProcedureState((state) => seedProcedureLibraryMockState(state, docNames), procedureStorageKey);
+    seededProcedureMockRef.current = true;
+    setProcedureLibraryRevision((n) => n + 1);
+  }, [procedureStorageKey, projectDocs, seedProcedureLibraryMockData]);
 
   const dismissDocLinkGuide = () => {
     try {
@@ -3038,6 +3975,38 @@ export default function ProjectHome({
     setEditing({ id: project.id, value: project.name });
     setTimeout(() => editInputRef.current?.select(), 50);
   };
+
+  const openAddProcedureModal = useCallback(() => {
+    setNewProcedureName('');
+    setNewProcedureText('');
+    setAddProcedureModalOpen(true);
+    setTimeout(() => addProcedureNameRef.current?.focus(), 0);
+  }, []);
+
+  const commitAddProcedure = useCallback(() => {
+    if (!procedureStorageKey) return;
+    const name = normalizeProcedureName(newProcedureName);
+    if (!hasRichTextContent(newProcedureText)) return;
+    const text = newProcedureText;
+    saveProcedureState((state) => {
+      const prev = procedureListFromState(state);
+      const existing = prev.find((p) => p.name.toLowerCase() === name.toLowerCase());
+      const nextProcedure = {
+        ...(existing || { id: `proc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }),
+        name,
+        text,
+        updatedAt: new Date().toISOString(),
+      };
+      const nextProcedures = existing
+        ? prev.map((p) => (p.id === existing.id ? nextProcedure : p))
+        : [...prev, nextProcedure];
+      return { ...state, procedures: nextProcedures };
+    }, procedureStorageKey);
+    setProcedureLibraryRevision((n) => n + 1);
+    setAddProcedureModalOpen(false);
+    setNewProcedureName('');
+    setNewProcedureText('');
+  }, [procedureStorageKey, newProcedureName, newProcedureText]);
 
   const stripDocFromOpenedDocs = (docName) => {
     saveToolLibraryState((s) => ({
@@ -3622,7 +4591,9 @@ export default function ProjectHome({
 
   const selectedProject = projectsSafe.find(p => p.id === selectedId);
   const docs = selectedId ? visibleProjectDocList(projectDocs, selectedId) : [];
-  const mergedDocs = selectedId ? mergedDocsList(projectMergedDocs, selectedId) : [];
+  const mergedDocs = documentPackagesEnabled && selectedId
+    ? mergedDocsList(projectMergedDocs, selectedId)
+    : [];
   const prdOb = selectedId ? (projectCadOnboarding[selectedId] || null) : null;
   const showPrdCadFlow = Boolean(
     prdOnboarding && selectedId && docs.length === 0 && prdOb?.phase !== 'complete',
@@ -3777,30 +4748,50 @@ export default function ProjectHome({
             >
               <NavItem icon={<Library size={14} />} label="Tool Library" active={view === 'tool-library'} />
             </div>
-            <div
-              onClick={() => {
-                setView('reusable-procedures');
-                setSelectedId(null);
-                setTocHubPackage(null);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <NavItem
-                icon={<ClipboardList size={14} />}
-                label="Reusable Procedures"
-                active={view === 'reusable-procedures'}
-              />
-            </div>
-            <div
-              onClick={() => {
-                setView('parts-library');
-                setSelectedId(null);
-                setTocHubPackage(null);
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              <NavItem icon={<Boxes size={14} />} label="Parts Library" active={view === 'parts-library'} />
-            </div>
+            {showReusableProceduresInSidebar ? (
+              <div
+                onClick={() => {
+                  setView('reusable-procedures');
+                  setSelectedId(null);
+                  setTocHubPackage(null);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <NavItem
+                  icon={<ListOrdered size={14} />}
+                  label="Reusable Procedures"
+                  active={view === 'reusable-procedures'}
+                />
+              </div>
+            ) : null}
+            {showProcedureLibraryInSidebar ? (
+              <div
+                onClick={() => {
+                  setView('procedure-library');
+                  setSelectedId(null);
+                  setTocHubPackage(null);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <NavItem
+                  icon={<ListOrdered size={14} />}
+                  label="Procedure Library"
+                  active={view === 'procedure-library'}
+                />
+              </div>
+            ) : null}
+            {showPartsLibraryInSidebar ? (
+              <div
+                onClick={() => {
+                  setView('parts-library');
+                  setSelectedId(null);
+                  setTocHubPackage(null);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <NavItem icon={<Boxes size={14} />} label="Parts Library" active={view === 'parts-library'} />
+              </div>
+            ) : null}
             {documentConnectionSandbox && showDocumentLinksInSidebar ? (
               <div
                 onClick={() => {
@@ -3918,31 +4909,33 @@ export default function ProjectHome({
               Projects
             </button>
 
-            <div style={{ padding: '6px 0 10px' }}>
-              <button
-                type="button"
-                onClick={addProject}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  width: '100%',
-                  background: C.blue,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 7,
-                  padding: '8px 0',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <Plus size={14} aria-hidden />
-                New Project
-              </button>
-            </div>
+            {newProjectButtonPlacement !== 'bottom' ? (
+              <div style={{ padding: '6px 0 10px' }}>
+                <button
+                  type="button"
+                  onClick={addProject}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    width: '100%',
+                    background: C.blue,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 7,
+                    padding: '8px 0',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Plus size={14} aria-hidden />
+                  New Project
+                </button>
+              </div>
+            ) : null}
 
             {projectsOpen && projectsSafe.map(p => {
               const tocHubHere = mergedPackageNavigation === 'toc-hub';
@@ -4145,7 +5138,7 @@ export default function ProjectHome({
                       </button>
                     )}
                   </div>
-                  {tocHubHere && !projectCollapsed ? (
+                  {(tocHubHere || showDocumentsUnderProjectInSidebar) && !projectCollapsed ? (
                     <div style={{ paddingLeft: 10, paddingTop: 2 }}>
                       {visibleProjectDocList(projectDocs, p.id).map((doc) => {
                         const docRowKey = `${p.id}:${doc.id}`;
@@ -4165,7 +5158,7 @@ export default function ProjectHome({
                           >
                             <button
                               type="button"
-                              onClick={() => navigate(editorHref(doc.name, false, editorPrototypePath))}
+                              onClick={() => navigate(docEditorHref(doc.name))}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -4378,7 +5371,36 @@ export default function ProjectHome({
                 lineHeight: 1.45,
               }}
               >
-                No projects yet. Use New Project above.
+                {newProjectButtonPlacement === 'bottom'
+                  ? 'No projects yet. Use New Project below.'
+                  : 'No projects yet. Use New Project above.'}
+              </div>
+            ) : null}
+            {newProjectButtonPlacement === 'bottom' && projectsOpen ? (
+              <div style={{ padding: '10px 0 8px' }}>
+                <button
+                  type="button"
+                  onClick={addProject}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    width: '100%',
+                    background: C.blue,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 7,
+                    padding: '8px 0',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Plus size={14} aria-hidden />
+                  New Project
+                </button>
               </div>
             ) : null}
           </div>
@@ -4531,7 +5553,7 @@ export default function ProjectHome({
                                       ? { nav: 'doc', readOnly: '1', docVersion: selectedVersion, returnTo }
                                       : { nav: 'doc', returnTo }
                                   );
-                                navigate(editorHref(d.name, false, editorPrototypePath, extra));
+                                navigate(docEditorHref(d.name, extra));
                               }}
                               style={{
                                 display: 'flex',
@@ -4799,10 +5821,35 @@ export default function ProjectHome({
               const tsB = parseInt(b.id.replace('d-', ''), 10) || 0;
               return tsB - tsA;
             });
-            const allMergedAcross = allMergedDocsAcrossProjects(projectMergedDocs, projectsSafe, projectDocs);
+            const allMergedAcross = documentPackagesEnabled
+              ? allMergedDocsAcrossProjects(projectMergedDocs, projectsSafe, projectDocs)
+              : [];
 
             if (allDocs.length === 0 && allMergedAcross.length === 0) {
               if (megadocumentEmptyState) {
+                const welcomeButtons = [
+                  {
+                    label: 'Create project',
+                    variant: 'primary',
+                    Icon: Plus,
+                    onClick: addProject,
+                  },
+                  {
+                    label: 'Add tool',
+                    variant: 'outline',
+                    Icon: Wrench,
+                    onClick: () => {
+                      setView('tool-library');
+                      setHomeToolModalRequest((n) => n + 1);
+                    },
+                  },
+                  {
+                    label: 'Add plugin',
+                    variant: 'outline',
+                    Icon: Plug,
+                    onClick: () => setAddPluginModalOpen(true),
+                  },
+                ];
                 return (
                   <div style={{
                     display: 'flex',
@@ -4814,50 +5861,84 @@ export default function ProjectHome({
                   }}
                   >
                     <div style={{
-                      width: 60, height: 60, borderRadius: '50%', background: C.blueLight,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18,
+                      width: '100%',
+                      maxWidth: 520,
+                      background: '#fff',
+                      border: `1px solid ${C.cardBdr}`,
+                      borderRadius: 14,
+                      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+                      padding: '40px 32px 32px',
+                      textAlign: 'center',
                     }}
                     >
-                      <FolderOpen size={28} color={C.blue} aria-hidden />
-                    </div>
-                    <h2 style={{
-                      fontSize: 22, fontWeight: 700, color: C.text, margin: '0 0 22px', textAlign: 'center',
-                    }}
-                    >
-                      Welcome to q20!
-                    </h2>
-                    <div style={{ width: '100%', maxWidth: 520 }}>
-                      <EmptyImportPanel
-                        title="No documents"
-                        description="Create a new document, add tools, and plugins."
-                        showFilePicker={false}
-                        leadIcon={<FileText size={22} color={C.blue} aria-hidden />}
-                        hint=""
-                        maxWidth={520}
-                        ctaButtons={[
-                          {
-                            label: 'Create project',
-                            variant: 'primary',
-                            Icon: Plus,
-                            onClick: addProject,
-                          },
-                          {
-                            label: 'Add tool',
-                            variant: 'outline',
-                            Icon: Wrench,
-                            onClick: () => {
-                              setView('tool-library');
-                              setHomeToolModalRequest((n) => n + 1);
-                            },
-                          },
-                          {
-                            label: 'Add plugin',
-                            variant: 'outline',
-                            Icon: Plug,
-                            onClick: () => setAddPluginModalOpen(true),
-                          },
-                        ]}
-                      />
+                      <div style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: '50%',
+                        background: C.blueLight,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 18px',
+                      }}
+                      >
+                        <FolderOpen size={28} color={C.blue} aria-hidden />
+                      </div>
+                      <h2 style={{
+                        fontSize: 22,
+                        fontWeight: 700,
+                        color: C.text,
+                        margin: '0 0 8px',
+                      }}
+                      >
+                        Welcome to q20!
+                      </h2>
+                      <p style={{
+                        fontSize: 14,
+                        color: C.muted,
+                        margin: '0 0 24px',
+                        lineHeight: 1.55,
+                      }}
+                      >
+                        Create a new project, add tools, and connect plugins.
+                      </p>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                      >
+                        {welcomeButtons.map((btn) => {
+                          const BtnIcon = btn.Icon ?? Plus;
+                          const isOutline = btn.variant === 'outline';
+                          return (
+                            <button
+                              key={btn.label}
+                              type="button"
+                              onClick={btn.onClick}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                background: isOutline ? '#fff' : C.blue,
+                                color: isOutline ? C.blue : '#fff',
+                                border: isOutline ? `1px solid rgba(79, 110, 247, 0.45)` : 'none',
+                                borderRadius: 8,
+                                padding: '10px 20px',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              <BtnIcon size={16} aria-hidden />
+                              {btn.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
@@ -4878,16 +5959,20 @@ export default function ProjectHome({
                   </h2>
                   <p style={{ fontSize: 14, color: C.sub, textAlign: 'center', maxWidth: 420, lineHeight: 1.6, margin: 0 }}>
                     {documentConnectionSandbox ? (
-                      <>
-                        This prototype is about <strong style={{ color: C.text }}>links between documents</strong>.
-                        Start with a sample project that already has three files and two links, or create your own project on the left.
-                      </>
+                      showDocumentConnectionSampleCta ? (
+                        <>
+                          This prototype is about <strong style={{ color: C.text }}>links between documents</strong>.
+                          Start with a sample project that already has three files and two links, or create your own project on the left.
+                        </>
+                      ) : (
+                        <>Create your own project to get started.</>
+                      )
                     ) : (
                       <>Looks like you have no projects yet. To get started, create one using the panel on the left.</>
                     )}
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: 24 }}>
-                    {documentConnectionSandbox ? (
+                    {documentConnectionSandbox && showDocumentConnectionSampleCta ? (
                       <button
                         type="button"
                         onClick={loadSampleConnectionDemo}
@@ -4906,11 +5991,11 @@ export default function ProjectHome({
                       onClick={addProject}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 7,
-                        background: documentConnectionSandbox ? '#fff' : C.blue,
-                        color: documentConnectionSandbox ? C.blue : '#fff',
-                        border: documentConnectionSandbox ? `1px solid ${C.blue}` : 'none',
+                        background: C.blue,
+                        color: '#fff',
+                        border: 'none',
                         borderRadius: 8,
-                        padding: '10px 22px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                        padding: '10px 22px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                       }}
                     >
                       <Plus size={16} />
@@ -5039,7 +6124,7 @@ export default function ProjectHome({
                       </div>
                     ) : null}
                     {allDocs.map((doc) => {
-                      const href = editorHref(doc.name, false, editorPrototypePath);
+                      const href = docEditorHref(doc.name);
                       const onDel = allowDeleteProjectsAndDocuments
                         ? () => setConfirmDeleteDoc({ projectId: doc.projectId, doc: { id: doc.id, name: doc.name } })
                         : undefined;
@@ -5056,6 +6141,7 @@ export default function ProjectHome({
                             documentLastEdited={prd.documentLastEdited}
                             accentKey={prd.accentKey}
                             operationCount={prd.operationCount}
+                            linkedDocNames={docCountPopoverNames(projectDocs, doc.projectId, prd.operationCount, doc.name)}
                             cadFileLabel={prd.cadFileLabel}
                             cadVersion={prd.cadVersion}
                             cadChangeSummary={prd.cadChangeSummary}
@@ -5087,7 +6173,9 @@ export default function ProjectHome({
                                 ? (e) => fillTocHubDocRefDragTransfer(e, doc.projectId, doc.id)
                                 : undefined
                             }
-                            inDocumentPackage={inPkg}
+                            inDocumentPackage={documentPackagesEnabled && inPkg}
+                            linkedCaption={documentCardLinkedCaption}
+                            showStatusTag={documentCardShowStatusTag}
                           />
                         );
                       }
@@ -5175,7 +6263,7 @@ export default function ProjectHome({
                         </thead>
                         <tbody>
                           {allDocs.map((doc) => {
-                            const href = editorHref(doc.name, false, editorPrototypePath);
+                            const href = docEditorHref(doc.name);
                             const onDel = allowDeleteProjectsAndDocuments
                               ? () => setConfirmDeleteDoc({ projectId: doc.projectId, doc: { id: doc.id, name: doc.name } })
                               : undefined;
@@ -5754,7 +6842,7 @@ export default function ProjectHome({
                       <ProjectConnectionGraphCanvas
                         graph={mockWeldFrameProject}
                         projectId={selectedId}
-                        onOpenDocument={(name) => navigate(editorHref(name, false, editorPrototypePath))}
+                        onOpenDocument={(name) => navigate(docEditorHref(name))}
                         onCadFileClick={(label) => openPartsMapForCad(label)}
                       />
                     ) : (
@@ -5836,7 +6924,7 @@ export default function ProjectHome({
                     {docLayout === 'tiles' ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 16 }}>
                         {docs.map((doc) => {
-                          const href = editorHref(doc.name, false, editorPrototypePath);
+                          const href = docEditorHref(doc.name);
                           const onDel = allowDeleteProjectsAndDocuments
                             ? () => setConfirmDeleteDoc({ projectId: selectedId, doc })
                             : undefined;
@@ -5852,6 +6940,7 @@ export default function ProjectHome({
                                 documentLastEdited={prd.documentLastEdited}
                                 accentKey={prd.accentKey}
                                 operationCount={prd.operationCount}
+                                linkedDocNames={docCountPopoverNames(projectDocs, selectedId, prd.operationCount, doc.name)}
                                 cadFileLabel={prd.cadFileLabel}
                                 cadVersion={prd.cadVersion}
                                 cadChangeSummary={prd.cadChangeSummary}
@@ -5868,7 +6957,7 @@ export default function ProjectHome({
                                   ? () => goToDocumentLinksFromDoc(selectedId, doc.id)
                                   : undefined}
                                 showFooter={showDocumentCardFooter}
-                                mergeSelectMode
+                                mergeSelectMode={documentPackagesEnabled}
                                 mergeSelectionViaCheckboxOnly
                                 mergeSelected={mergeSelectedKeys.has(mergeDocSelectionKey(selectedId, doc.id))}
                                 onMergeToggle={() => toggleMergeDocSelection(selectedId, doc.id)}
@@ -5882,7 +6971,9 @@ export default function ProjectHome({
                                     ? (e) => fillTocHubDocRefDragTransfer(e, selectedId, doc.id)
                                     : undefined
                                 }
-                                inDocumentPackage={inPkg}
+                                inDocumentPackage={documentPackagesEnabled && inPkg}
+                                linkedCaption={documentCardLinkedCaption}
+                                showStatusTag={documentCardShowStatusTag}
                               />
                             );
                           }
@@ -5953,7 +7044,7 @@ export default function ProjectHome({
                             </thead>
                             <tbody>
                               {docs.map((doc) => {
-                                const href = editorHref(doc.name, false, editorPrototypePath);
+                                const href = docEditorHref(doc.name);
                                 const onDel = allowDeleteProjectsAndDocuments
                                   ? () => setConfirmDeleteDoc({ projectId: selectedId, doc })
                                   : undefined;
@@ -6199,6 +7290,7 @@ export default function ProjectHome({
                       </div>
                     )}
 
+                    {documentPackagesEnabled ? (
                     <div style={{ marginTop: 28 }}>
                       <div style={{
                         margin: '0 0 12px',
@@ -6393,6 +7485,7 @@ export default function ProjectHome({
                         })}
                       </div>
                     </div>
+                    ) : null}
 
                     </>
                     )}
@@ -6420,6 +7513,17 @@ export default function ProjectHome({
               showUsedInDesignReview={toolLibraryUsedInDesignReview}
               preferEmptyToolLibrary={megadocumentEmptyState}
               requestOpenAddToolModal={homeToolModalRequest}
+              editorPrototypePath={editorPrototypePath}
+              usedInStyle={toolLibraryUsedInStyle}
+            />
+          )}
+
+          {showProcedureLibraryInSidebar && view === 'procedure-library' && (
+            <ProcedureLibraryView
+              storageKey={procedureStorageKey || storageKey}
+              refreshToken={procedureLibraryRevision}
+              onAddProcedure={procedureStorageKey ? openAddProcedureModal : undefined}
+              getDocHref={(docName) => docEditorHref(docName, { nav: 'doc' })}
             />
           )}
 
@@ -6579,6 +7683,86 @@ export default function ProjectHome({
             setNewDocTemplateId('blank');
           }}
         />
+      )}
+
+      {addProcedureModalOpen && (
+        <div
+          className="ptb-procedure-modal"
+          onClick={() => {
+            setAddProcedureModalOpen(false);
+            setNewProcedureName('');
+            setNewProcedureText('');
+          }}
+        >
+          <div
+            role="dialog"
+            aria-labelledby="project-home-add-procedure-title"
+            className="ptb-procedure-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div
+              className="ptb-procedure-modal-header"
+            >
+              <span id="project-home-add-procedure-title" className="ptb-procedure-modal-title">
+                Add procedure
+              </span>
+              <button
+                type="button"
+                className="ptb-procedure-modal-close"
+                aria-label="Close"
+                onClick={() => {
+                  setAddProcedureModalOpen(false);
+                  setNewProcedureName('');
+                  setNewProcedureText('');
+                }}
+              >
+                <X size={18} aria-hidden />
+              </button>
+            </div>
+            <div className="ptb-procedure-modal-body">
+              <label className="ptb-procedure-modal-field" htmlFor="project-home-procedure-name">
+                Procedure name
+                <input
+                  id="project-home-procedure-name"
+                  ref={addProcedureNameRef}
+                  value={newProcedureName}
+                  onChange={(e) => setNewProcedureName(e.target.value)}
+                  placeholder="e.g. Warranty disclaimer"
+                />
+              </label>
+              <label className="ptb-procedure-modal-field" htmlFor="project-home-procedure-text">
+                Procedure text
+                <ProcedureRichTextEditor
+                  id="project-home-procedure-text"
+                  value={newProcedureText}
+                  onChange={setNewProcedureText}
+                />
+              </label>
+            </div>
+            <div className="ptb-procedure-modal-actions">
+              <button
+                type="button"
+                className="ptb-procedure-modal-btn ptb-procedure-modal-btn--secondary"
+                onClick={() => {
+                  setAddProcedureModalOpen(false);
+                  setNewProcedureName('');
+                  setNewProcedureText('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ptb-procedure-modal-btn ptb-procedure-modal-btn--primary"
+                onClick={commitAddProcedure}
+                disabled={!hasRichTextContent(newProcedureText)}
+              >
+                Create procedure
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Add plugin (CAD integrations) ─────────────────────────────────── */}

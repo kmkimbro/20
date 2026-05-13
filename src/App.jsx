@@ -39,6 +39,7 @@ import {
 import { INITIAL_OPERATIONS } from './config/sampleData.js';
 import { PARTS_CATALOG_INITIAL, TOOLS_BOM_INITIAL } from './data/toolsBom.js';
 import { buildStackedMegaOperations, parseMegaOfParam } from './lib/megaDocMerge.js';
+import { loadProcedureState, saveProcedureState, procedureListFromState, normalizeProcedureName, resolveProcedureStorageKey, countProcedureUses } from './lib/procedureStore.js';
 
 function readInitialMegaOperations() {
   if (typeof window === 'undefined') return INITIAL_OPERATIONS;
@@ -73,7 +74,10 @@ export default function App() {
   const { conceptId } = usePrototype();
   const { viewMode } = useViewMode();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [navActive, setNavActive] = useState(searchParams.get('nav') === 'cad' ? 'cad' : 'doc');
+  const isDes57ProcedureEditor = conceptId === 'des-57-procedures-v1-editor';
+  const [navActive, setNavActive] = useState(
+    isDes57ProcedureEditor ? 'doc' : (searchParams.get('nav') === 'cad' ? 'cad' : 'doc'),
+  );
   const [docTitle, setDocTitle] = useState(searchParams.get('docName') ?? undefined);
   const emptyCad = searchParams.get('empty') === '1';
   const des36BannerKind = searchParams.get('des36Banner'); // 'auto' | 'review' | null
@@ -92,6 +96,10 @@ export default function App() {
   const [approveNotifyShown, setApproveNotifyShown] = useState(false);
   const docNameParam = searchParams.get('docName');
   const navParam = searchParams.get('nav');
+  const procedureStorageKey = resolveProcedureStorageKey({
+    queryKey: searchParams.get('procedureStorageKey'),
+    conceptId,
+  });
   const megaOfQuery = searchParams.get('megaOf') ?? '';
   const megaSourceIds = useMemo(() => parseMegaOfParam(megaOfQuery), [megaOfQuery]);
   const megaSections = useMemo(() => {
@@ -132,8 +140,12 @@ export default function App() {
       setNavActive('doc');
       return;
     }
+    if (isDes57ProcedureEditor) {
+      setNavActive(navParam === 'tools-bom' ? 'tools-bom' : 'doc');
+      return;
+    }
     setNavActive(navParam === 'cad' ? 'cad' : 'doc');
-  }, [navParam, uploadedDocMode]);
+  }, [isDes57ProcedureEditor, navParam, uploadedDocMode]);
 
   useEffect(() => {
     if (des36StateParam) setDocLifecycle(des36StateParam);
@@ -206,6 +218,58 @@ export default function App() {
   });
   const [partsCatalog, setPartsCatalog] = useState(() => [...PARTS_CATALOG_INITIAL]);
   const [toolsLibraryOpen, setToolsLibraryOpen] = useState(false);
+  const [procedures, setProcedures] = useState(() => (
+    procedureStorageKey ? procedureListFromState(loadProcedureState(procedureStorageKey)) : []
+  ));
+  const proceduresWithUsage = useMemo(() => {
+    if (!procedureStorageKey) return [];
+    const state = loadProcedureState(procedureStorageKey);
+    return procedureListFromState(state).map((procedure) => ({
+      ...procedure,
+      useCount: countProcedureUses(state, procedure.name),
+    }));
+  }, [procedureStorageKey, procedures]);
+
+  useEffect(() => {
+    if (!procedureStorageKey) return;
+    const refresh = () => setProcedures(procedureListFromState(loadProcedureState(procedureStorageKey)));
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [procedureStorageKey]);
+
+  const saveProcedure = useCallback(({ name, text, previousName }) => {
+    if (!procedureStorageKey) return null;
+    const procedureName = normalizeProcedureName(name);
+    const procedureText = (text ?? '').toString();
+    let savedProcedure = null;
+    saveProcedureState((state) => {
+      const prev = procedureListFromState(state);
+      const existing = prev.find((p) => (
+        (previousName && p.name === previousName)
+        || p.name.toLowerCase() === procedureName.toLowerCase()
+      ));
+      savedProcedure = {
+        ...(existing || { id: `proc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }),
+        name: procedureName,
+        text: procedureText,
+        updatedAt: new Date().toISOString(),
+      };
+      const nextProcedures = existing
+        ? prev.map((p) => (p.id === existing.id ? savedProcedure : p))
+        : [...prev, savedProcedure];
+      return { ...state, procedures: nextProcedures };
+    }, procedureStorageKey);
+    setProcedures(procedureListFromState(loadProcedureState(procedureStorageKey)));
+    return savedProcedure;
+  }, [procedureStorageKey]);
+
+  const handleGoToProcedureLibrary = useCallback(() => {
+    const returnTo = editorBackToParam || searchParams.get('returnTo');
+    if (returnTo) {
+      window.location.href = `${returnTo}?view=procedure-library`;
+    }
+  }, [editorBackToParam, searchParams]);
 
   // On mount: record this document in openedDocs so the Tool Library can show "used in"
   useEffect(() => {
@@ -233,6 +297,62 @@ export default function App() {
       localStorage.setItem('des36_state', JSON.stringify(state));
     } catch { /* non-critical */ }
   }, [toolsBom, hasBomTables]);
+
+  // Persist page-level tool references for delete confirmation UX in Tool Library.
+  useEffect(() => {
+    const doc = (docNameParam ?? '').toString().trim();
+    if (!doc) return;
+    try {
+      const pageList = buildPageList(operations);
+      const refsByToolId = {};
+      for (const page of pageList) {
+        const { ownerId } = getPageContext(page.id);
+        if (!ownerId) continue;
+        const found = findNode(operations, ownerId);
+        const toolIds = Array.isArray(found?.node?.toolIds) ? found.node.toolIds : [];
+        const dedupedToolIds = [...new Set(toolIds)];
+        for (const toolId of dedupedToolIds) {
+          if (!toolId) continue;
+          if (!Array.isArray(refsByToolId[toolId])) refsByToolId[toolId] = [];
+          refsByToolId[toolId].push({
+            pageId: page.id,
+            pageLabel: page.title || page.id,
+          });
+        }
+      }
+      const raw = localStorage.getItem('des36_state');
+      const state = raw ? JSON.parse(raw) : {};
+      state.toolReferencesByDoc = {
+        ...(state.toolReferencesByDoc || {}),
+        [doc]: refsByToolId,
+      };
+      localStorage.setItem('des36_state', JSON.stringify(state));
+    } catch {
+      /* non-critical */
+    }
+  }, [operations, docNameParam]);
+
+  useEffect(() => {
+    if (!procedureStorageKey || !docNameParam) return;
+    const refs = {};
+    placedItems.forEach((item) => {
+      if (item.type !== 'text' || typeof item.content !== 'string') return;
+      const re = /\[Procedure:\s*([^\]]+)\]/gi;
+      let match;
+      while ((match = re.exec(item.content)) !== null) {
+        const name = normalizeProcedureName(match[1]);
+        refs[name] = (refs[name] || 0) + 1;
+      }
+    });
+    const nextState = saveProcedureState((state) => ({
+      ...state,
+      procedureReferencesByDoc: {
+        ...(state.procedureReferencesByDoc || {}),
+        [docNameParam]: refs,
+      },
+    }), procedureStorageKey);
+    setProcedures(procedureListFromState(nextState));
+  }, [placedItems, procedureStorageKey, docNameParam]);
 
   const addPartToCurrentOperation = useCallback((ownerId, name, qty = 1) => {
     if (!ownerId) return false;
@@ -456,15 +576,20 @@ export default function App() {
   }, []);
 
   const addPlacedItem = useCallback(({ type, src, svgContent, pageId, content }) => {
-    const canvasEl = document.querySelector('.canvas');
     const isText = type === 'text';
+    const resolvedPageId = pageId ?? (isText && isDes57ProcedureEditor ? activePageId : undefined);
+    const canvasSelector = resolvedPageId != null
+      ? `.canvas[data-page-id="${String(resolvedPageId).replace(/"/g, '\\"')}"]`
+      : '.canvas';
+    const canvasEl = document.querySelector(canvasSelector) || document.querySelector('.canvas');
+    const centerOnPage = resolvedPageId != null || (isText && isDes57ProcedureEditor);
     const w = isText ? 280 : DEFAULT_WIDTH;
     const h = isText ? 120 : DEFAULT_HEIGHT;
     const maxLeft = canvasEl ? Math.max(0, canvasEl.clientWidth - w) : 800 - w;
     const maxTop = canvasEl ? Math.max(0, canvasEl.clientHeight - h) : 600 - h;
     let left;
     let top;
-    if (pageId != null) {
+    if (centerOnPage) {
       if (canvasEl) {
         left = Math.round((canvasEl.clientWidth - w) / 2);
         top = Math.round((canvasEl.clientHeight - h) / 2);
@@ -480,9 +605,9 @@ export default function App() {
     }
     setPlacedItems((prev) => [
       ...prev,
-      { id: nextId++, type, left, top, width: w, height: h, src, svgContent, pageId: pageId ?? undefined, content: type === 'text' ? (content ?? '') : undefined },
+      { id: nextId++, type, left, top, width: w, height: h, src, svgContent, pageId: resolvedPageId, content: type === 'text' ? (content ?? '') : undefined },
     ]);
-  }, [lastCanvasMouse.x, lastCanvasMouse.y]);
+  }, [activePageId, isDes57ProcedureEditor, lastCanvasMouse.x, lastCanvasMouse.y]);
 
   const removePlacedItem = useCallback((id) => {
     setPlacedItems((prev) => prev.filter((item) => item.id !== id));
@@ -821,6 +946,9 @@ export default function App() {
               onReplaceToolInOperation={hasBomTables ? replaceToolInOperationStep : undefined}
               onReorderPart={hasBomTables ? reorderPartsInOperationStep : undefined}
               onReorderTool={hasBomTables ? reorderToolsInOperationStep : undefined}
+              procedures={procedureStorageKey ? proceduresWithUsage : undefined}
+              onSaveProcedure={procedureStorageKey ? saveProcedure : undefined}
+              onGoToProcedureLibrary={procedureStorageKey ? handleGoToProcedureLibrary : undefined}
             />
           </main>
         </div>

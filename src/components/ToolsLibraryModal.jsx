@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Trash2, AlertTriangle, Plus } from 'lucide-react';
 import { getOperationsUsingTool } from '../lib/docTree.js';
 
@@ -19,6 +19,50 @@ export default function ToolsLibraryModal({
   const [addValue, setAddValue] = useState('');
   const inputRef = useRef(null);
   const addInputRef = useRef(null);
+  const [toolReferencesByDoc, setToolReferencesByDoc] = useState({});
+
+  const currentDocName = useMemo(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('docName') || '';
+    } catch {
+      return '';
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('des36_state');
+      const state = raw ? JSON.parse(raw) : {};
+      setToolReferencesByDoc(state.toolReferencesByDoc || {});
+    } catch {
+      setToolReferencesByDoc({});
+    }
+  }, [open, tools.length, operations.length]);
+
+  const referencesForTool = (toolId) => {
+    const docsFromStorage = Object.entries(toolReferencesByDoc || {})
+      .map(([docName, refsByTool]) => {
+        const pages = Array.isArray(refsByTool?.[toolId]) ? refsByTool[toolId] : [];
+        if (pages.length < 1) return null;
+        return {
+          docName,
+          pages: [...pages].sort((a, b) => String(a.pageLabel || '').localeCompare(String(b.pageLabel || ''))),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.docName.localeCompare(b.docName));
+
+    if (docsFromStorage.length > 0) return docsFromStorage;
+
+    // Fallback while storage is still warming: derive from current open document.
+    const opRefs = getOperationsUsingTool(operations, toolId);
+    if (!opRefs.length) return [];
+    return [{
+      docName: currentDocName || 'Current document',
+      pages: opRefs.map((op) => ({ pageId: op.id, pageLabel: op.label })),
+    }];
+  };
 
   const commitAdd = () => {
     if (onAddTool?.(addValue)) {
@@ -215,6 +259,7 @@ export default function ToolsLibraryModal({
       {/* Popconfirm — fixed so it escapes all overflow:hidden/auto parents */}
       {confirmDeleteId && (() => {
         const tool = tools.find(t => t.id === confirmDeleteId);
+        const references = referencesForTool(confirmDeleteId);
         return (
           <>
             {/* invisible backdrop to catch outside clicks */}
@@ -253,6 +298,61 @@ export default function ToolsLibraryModal({
                   Deleting <strong>{tool?.name}</strong> will remove it from all documents.
                 </p>
               </div>
+              {references.length > 0 ? (
+                <div style={{
+                  marginBottom: 10,
+                  maxHeight: 170,
+                  overflow: 'auto',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 8,
+                  padding: '8px 9px',
+                  background: '#F8FAFC',
+                }}
+                >
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                    Referenced in
+                  </div>
+                  {references.map((docRef) => {
+                    const href = `${window.location.pathname}?docName=${encodeURIComponent(docRef.docName)}&nav=doc`;
+                    return (
+                      <div key={docRef.docName} style={{ marginBottom: 7 }}>
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 12, fontWeight: 600, color: '#4F46E5', textDecoration: 'none' }}
+                        >
+                          {docRef.docName}
+                        </a>
+                        {docRef.pages.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                            {docRef.pages.map((page, idx) => (
+                              <a
+                                key={`${docRef.docName}:${page.pageId || idx}`}
+                                href={href}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  color: '#4338CA',
+                                  background: '#EEF2FF',
+                                  border: '1px solid #C7D2FE',
+                                  borderRadius: 999,
+                                  padding: '2px 7px',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                {page.pageLabel}
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setConfirmDeleteId(null)}

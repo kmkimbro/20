@@ -8,7 +8,7 @@ import PlacedTextBox from './PlacedTextBox.jsx';
 const MIN_TABLE_W = 160;
 const MIN_TABLE_H = 120;
 
-function PageCard({ page, placedItems, canvasRect, onCanvasMouseMove, onCanvasRectChange, onRemovePlacedItem, onUpdatePlacedItem, onOpenModal, onNavigateToCad, onStartRetake, PlacedItemComponent, hoveredRow, setHoveredRow, showPlacedItems, operationId, partsForOperation, toolIdsForOperation, toolsBom, partsCatalog, onAddPartToOperation, onAddToolToBom, onRemovePartFromOperation, onRemoveToolFromOperation, onOpenToolsLibrary, onRenameTool, onRenamePart, onReplacePartInOperation, onReplaceToolInOperation, onReorderPart, onReorderTool, tableLayout, onUpdateTableLayout, activeAddPartsPageId, setActiveAddPartsPageId, activeAddToolsPageId, setActiveAddToolsPageId }) {
+function PageCard({ page, placedItems, canvasRect, onCanvasMouseMove, onCanvasRectChange, onRemovePlacedItem, onUpdatePlacedItem, onOpenModal, onNavigateToCad, onStartRetake, PlacedItemComponent, hoveredRow, setHoveredRow, showPlacedItems, operationId, partsForOperation, toolIdsForOperation, toolsBom, partsCatalog, onAddPartToOperation, onAddToolToBom, onRemovePartFromOperation, onRemoveToolFromOperation, onOpenToolsLibrary, onRenameTool, onRenamePart, onReplacePartInOperation, onReplaceToolInOperation, onReorderPart, onReorderTool, procedures, onSaveProcedure, onGoToProcedureLibrary, tableLayout, onUpdateTableLayout, activeAddPartsPageId, setActiveAddPartsPageId, activeAddToolsPageId, setActiveAddToolsPageId }) {
   const addingPartRow = activeAddPartsPageId === page.id;
   const addingToolRow = activeAddToolsPageId === page.id;
 
@@ -727,6 +727,9 @@ function PageCard({ page, placedItems, canvasRect, onCanvasMouseMove, onCanvasRe
           onAddPartToOperation={onAddPartToOperation}
           onAddToolToBom={onAddToolToBom}
           onReplaceToolInOperation={onReplaceToolInOperation}
+          procedures={procedures}
+          onSaveProcedure={onSaveProcedure}
+          onGoToProcedureLibrary={onGoToProcedureLibrary}
         />
       ))}
     </div>
@@ -762,6 +765,9 @@ export default function Canvas({
   onReplaceToolInOperation,
   onReorderPart,
   onReorderTool,
+  procedures,
+  onSaveProcedure,
+  onGoToProcedureLibrary,
 }) {
   const { placedItemComponent: PlacedItemComponent, conceptId } = usePrototype();
   const showPageActions = conceptId === 'image-two-buttons';
@@ -872,6 +878,9 @@ export default function Canvas({
               onReplaceToolInOperation={onReplaceToolInOperation}
               onReorderPart={onReorderPart}
               onReorderTool={onReorderTool}
+              procedures={procedures}
+              onSaveProcedure={onSaveProcedure}
+              onGoToProcedureLibrary={onGoToProcedureLibrary}
               tableLayout={getTableLayout(page.id)}
               onUpdateTableLayout={(key, updates) => updateTableLayout(page.id, key, updates)}
               activeAddPartsPageId={activeAddPartsPageId}

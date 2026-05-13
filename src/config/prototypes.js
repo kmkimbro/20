@@ -79,6 +79,13 @@ export const PROTOTYPES = [
     path: '/prototype/document-package',
   },
   {
+    id: 'des-57-procedures-v1',
+    title: 'DES 57 Procedures V1',
+    description:
+      'Procedures iteration: isolated saved state, project/document rail, streamlined document cards, procedure library, rich text, and Tool Library count-list UX.',
+    path: '/prototype/des-57-procedures-v1',
+  },
+  {
     id: 'megadocument-empty',
     title: 'Megadocument — empty state',
     description:

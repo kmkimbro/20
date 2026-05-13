@@ -2965,6 +2965,11 @@ html[data-concept-id='des-combined-3'] .tools-table-wrapper--draggable:focus-wit
   color: var(--gray-800, #1f2937);
 }
 
+.placed-textbox-toolbar .placed-cta-btn--danger:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
 .placed-textbox-toolbar-group {
   display: flex;
   align-items: center;
@@ -3038,13 +3043,334 @@ html[data-concept-id='des-combined-3'] .tools-table-wrapper--draggable:focus-wit
 }
 
 .placed-textbox-tag--part {
-  background: #a7f3d0;
-  color: #065f46;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 
 .placed-textbox-tag--tool {
-  background: #e9d5ff;
-  color: #5b21b6;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
+.placed-textbox-tag--procedure {
+  background: var(--gray-100);
+  color: var(--gray-800);
+  border: 1px solid var(--border-color);
+}
+
+.placed-textbox-tag--part:hover {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.placed-textbox-tag--tool:hover {
+  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.14);
+}
+
+.placed-textbox-tag--procedure:hover {
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
+}
+
+.placed-textbox-selection-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--gray-800);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
+.placed-textbox-selection-toolbar-btn,
+.placed-textbox-selection-toolbar-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.placed-textbox-selection-toolbar-btn:hover,
+.placed-textbox-selection-toolbar-secondary:hover:not(:disabled) {
+  background: var(--gray-100);
+}
+
+.placed-textbox-selection-toolbar-secondary:disabled {
+  color: var(--gray-400);
+  cursor: not-allowed;
+}
+
+.placed-textbox-selection-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  margin: 0 2px;
+}
+
+.placed-textbox-procedure-wand {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.placed-textbox-procedure-wand button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  color: var(--blue-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+}
+
+.placed-textbox-procedure-wand button:disabled {
+  color: var(--gray-400);
+  border-color: var(--border-color);
+  background: var(--gray-50);
+  cursor: not-allowed;
+}
+
+.ptb-procedure-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ptb-procedure-modal-card {
+  width: min(480px, 100%);
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.ptb-procedure-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ptb-procedure-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.ptb-procedure-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.ptb-procedure-modal-close:hover {
+  background: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.ptb-procedure-modal-body {
+  padding: 20px;
+}
+
+.ptb-procedure-modal-subtitle {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gray-600);
+}
+
+.ptb-procedure-preview {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  font-size: 13px;
+  line-height: 1.45;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.ptb-procedure-modal-field {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 16px;
+}
+
+.ptb-procedure-modal-card label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 16px;
+}
+
+.ptb-procedure-modal-field:last-child,
+.ptb-procedure-modal-card label:last-child {
+  margin-bottom: 0;
+}
+
+.ptb-procedure-modal-card input,
+.ptb-procedure-modal-card textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--gray-800);
+}
+
+.ptb-procedure-modal-card input:focus,
+.ptb-procedure-modal-card textarea:focus,
+.ptb-procedure-modal-card .procedure-rich-text-surface:focus {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 1px var(--blue-primary);
+}
+
+.procedure-rich-text-editor {
+  margin-top: 6px;
+}
+
+.procedure-rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: var(--gray-50);
+}
+
+.procedure-rich-text-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+.procedure-rich-text-toolbar-btn:hover {
+  background: var(--gray-200);
+  color: var(--gray-900);
+}
+
+.procedure-rich-text-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--border-color);
+}
+
+.procedure-rich-text-surface {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 0 0 7px 7px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--gray-800);
+  line-height: 1.45;
+  overflow: auto;
+  background: var(--white);
+}
+
+.procedure-rich-text-surface:empty::before {
+  content: attr(data-placeholder);
+  color: var(--gray-500);
+  pointer-events: none;
+}
+
+.procedure-rich-text-surface ul,
+.procedure-rich-text-surface ol {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+
+.procedure-rich-text-surface p {
+  margin: 0;
+}
+
+.procedure-rich-text-surface p + p {
+  margin-top: 0.5em;
+}
+
+.ptb-procedure-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ptb-procedure-modal-btn {
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ptb-procedure-modal-btn--secondary {
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  color: var(--gray-800);
+}
+
+.ptb-procedure-modal-btn--primary {
+  border: none;
+  background: var(--blue-primary);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.ptb-procedure-modal-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .placed-textbox-tag--orphaned {
@@ -3095,8 +3421,8 @@ html[data-concept-id='des-combined-3'] .tools-table-wrapper--draggable:focus-wit
 }
 
 .placed-textbox-tag-input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.2);
 }
 
 .placed-textbox-input {

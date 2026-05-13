@@ -9,6 +9,7 @@ import ProjectHome from './pages/ProjectHome.jsx';
 import Des36DocumentConnection from './pages/Des36DocumentConnection.jsx';
 import Megadocument from './pages/Megadocument.jsx';
 import Megadocument2 from './pages/Megadocument2.jsx';
+import Des57ProceduresV1 from './pages/Des57ProceduresV1.jsx';
 import MegadocumentEmptyState from './pages/MegadocumentEmptyState.jsx';
 import App from './App.jsx';
 import '../styles.css';
@@ -101,6 +102,7 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/megadocument" element={<Megadocument />} />
               <Route path="/prototype/document-package" element={<Megadocument2 />} />
               <Route path="/prototype/megadocument-2" element={<Navigate to="/prototype/document-package" replace />} />
+              <Route path="/prototype/des-57-procedures-v1" element={<Des57ProceduresV1 />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route path="/prototype/tool-library-mid-fi" element={<ProjectHome editorPrototypePath="/prototype/tool-library-mid-fi-editor" />} />
               <Route path="/prototype/:conceptId" element={<PrototypeWrapper />} />
