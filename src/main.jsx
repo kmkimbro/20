@@ -3,16 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrototypeProvider from './contexts/PrototypeProvider.jsx';
 import ViewModeProvider, { ViewModeRoot } from './contexts/ViewModeContext.jsx';
-import PrototypeWrapper from './PrototypeWrapper.jsx';
-import PrototypeGallery from './pages/PrototypeGallery.jsx';
-import ProjectHome from './pages/ProjectHome.jsx';
-import Des36DocumentConnection from './pages/Des36DocumentConnection.jsx';
-import Megadocument from './pages/Megadocument.jsx';
-import Megadocument2 from './pages/Megadocument2.jsx';
 import Des57ProceduresV1 from './pages/Des57ProceduresV1.jsx';
-import MegadocumentEmptyState from './pages/MegadocumentEmptyState.jsx';
 import App from './App.jsx';
 import '../styles.css';
+
+const DES57_HOME = '/prototype/des-57-procedures-v1';
 
 class RootErrorBoundary extends React.Component {
   constructor(props) {
@@ -42,10 +37,8 @@ class RootErrorBoundary extends React.Component {
         >
           <h1 style={{ fontSize: 18, marginBottom: 8 }}>This page hit a JavaScript error</h1>
           <p style={{ color: '#444', marginBottom: 16, lineHeight: 1.5, maxWidth: 640 }}>
-            Try clearing site data for this origin and reload (Application → Local Storage → remove
-            {' '}
-            <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>des36_state</code>
-            ). If the problem persists, share the stack trace below.
+            Try clearing site data for this origin and reload (Application → Local Storage).
+            If the problem persists, share the stack trace below.
           </p>
           <pre style={{
             fontSize: 12,
@@ -85,27 +78,18 @@ ReactDOM.createRoot(rootEl).render(
         <ViewModeRoot>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Navigate to="/prototype/document-package" replace />} />
-              <Route path="/prototype" element={<PrototypeGallery />} />
-              <Route path="/prototype/des-36" element={<ProjectHome allowDeleteProjectsAndDocuments prdOnboarding />} />
+              <Route path="/" element={<Navigate to={DES57_HOME} replace />} />
+              <Route path="/prototype" element={<Navigate to={DES57_HOME} replace />} />
+              <Route path={DES57_HOME} element={<Des57ProceduresV1 />} />
               <Route
-                path="/prototype/des-36-v2"
+                path="/prototype/des-57-procedures-v1-editor"
                 element={(
-                <ProjectHome
-                  allowDeleteProjectsAndDocuments
-                  prdOnboarding
-                  projectConnectionGraph
-                />
+                  <PrototypeProvider conceptId="des-57-procedures-v1-editor">
+                    <App />
+                  </PrototypeProvider>
                 )}
               />
-              <Route path="/prototype/des-36-document-connection" element={<Des36DocumentConnection />} />
-              <Route path="/prototype/megadocument" element={<Megadocument />} />
-              <Route path="/prototype/document-package" element={<Megadocument2 />} />
-              <Route path="/prototype/megadocument-2" element={<Navigate to="/prototype/document-package" replace />} />
-              <Route path="/prototype/des-57-procedures-v1" element={<Des57ProceduresV1 />} />
-              <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
-              <Route path="/prototype/tool-library-mid-fi" element={<ProjectHome editorPrototypePath="/prototype/tool-library-mid-fi-editor" />} />
-              <Route path="/prototype/:conceptId" element={<PrototypeWrapper />} />
+              <Route path="*" element={<Navigate to={DES57_HOME} replace />} />
             </Routes>
           </BrowserRouter>
         </ViewModeRoot>

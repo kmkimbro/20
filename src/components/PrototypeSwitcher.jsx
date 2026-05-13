@@ -123,62 +123,66 @@ export default function PrototypeSwitcher() {
               <LayoutGrid size={16} />
               Flow view
             </button>
-            <div
-              style={{
-                height: 1,
-                background: '#e0e0e0',
-                margin: '4px 0',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => handleSelect('/')}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '10px 12px',
-                border: 'none',
-                background: 'transparent',
-                textAlign: 'left',
-                cursor: 'pointer',
-                borderRadius: 4,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f5f5f5';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              Production
-            </button>
-            {PROTOTYPES.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => handleSelect(p.path)}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: 'none',
-                  background: location.pathname === p.path ? '#F0F7FF' : 'transparent',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  borderRadius: 4,
-                  color: location.pathname === p.path ? '#4F6EF7' : 'inherit',
-                }}
-                onMouseEnter={(e) => {
-                  if (location.pathname !== p.path) e.currentTarget.style.background = '#f5f5f5';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background =
-                    location.pathname === p.path ? '#F0F7FF' : 'transparent';
-                }}
-              >
-                {p.title}
-              </button>
-            ))}
+            {PROTOTYPES.length > 1 ? (
+              <>
+                <div
+                  style={{
+                    height: 1,
+                    background: '#e0e0e0',
+                    margin: '4px 0',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSelect('/prototype/des-57-procedures-v1')}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: 'none',
+                    background: 'transparent',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    borderRadius: 4,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f5f5f5';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  Home
+                </button>
+                {PROTOTYPES.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelect(p.path)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: 'none',
+                      background: location.pathname === p.path ? '#F0F7FF' : 'transparent',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      borderRadius: 4,
+                      color: location.pathname === p.path ? '#4F6EF7' : 'inherit',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (location.pathname !== p.path) e.currentTarget.style.background = '#f5f5f5';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background =
+                        location.pathname === p.path ? '#F0F7FF' : 'transparent';
+                    }}
+                  >
+                    {p.title}
+                  </button>
+                ))}
+              </>
+            ) : null}
           </div>
         )}
       </div>
@@ -186,8 +190,8 @@ export default function PrototypeSwitcher() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label="Switch prototype"
-        title="Switch prototype concept"
+        aria-label={PROTOTYPES.length > 1 ? 'Switch prototype' : 'View mode'}
+        title={PROTOTYPES.length > 1 ? 'Switch prototype concept' : 'Wireframe / flow view'}
         style={{
           pointerEvents: 'auto',
           display: 'flex',

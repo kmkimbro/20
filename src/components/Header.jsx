@@ -32,7 +32,7 @@ export default function Header({
       navigate(-1);
       return;
     }
-    navigate('/prototype/document-package');
+    navigate('/prototype/des-57-procedures-v1');
   };
 
   return (
