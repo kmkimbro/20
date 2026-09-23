@@ -13,6 +13,7 @@ const CONCEPT_MAP = {
   'des-combined-2': PlacedItem_Combined,
   'des-combined-3': PlacedItem_Combined,
   'des-57-procedures-v1-editor': PlacedItem_Combined,
+  'assembly-map-editor': PlacedItem_Combined,
 };
 
 export const PrototypeContext = createContext({

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Squirrel, Box, LayoutGrid } from 'lucide-react';
-import { PROTOTYPES } from '../config/prototypes.js';
+import { PROTOTYPES, isPrototypeActive } from '../config/prototypes.js';
 import { useViewMode } from '../contexts/ViewModeContext.jsx';
 
 export default function PrototypeSwitcher() {
@@ -40,6 +40,27 @@ export default function PrototypeSwitcher() {
 
   if (!shouldShow) return null;
 
+  const itemStyle = (active) => ({
+    display: 'block',
+    width: '100%',
+    padding: '10px 12px',
+    border: 'none',
+    background: active ? '#F0F7FF' : 'transparent',
+    textAlign: 'left',
+    cursor: 'pointer',
+    borderRadius: 4,
+    color: active ? '#4F6EF7' : 'inherit',
+    fontSize: 14,
+  });
+
+  const onItemHover = (e, active) => {
+    if (!active) e.currentTarget.style.background = '#f5f5f5';
+  };
+
+  const onItemLeave = (e, active) => {
+    e.currentTarget.style.background = active ? '#F0F7FF' : 'transparent';
+  };
+
   return (
     <div
       style={{
@@ -58,7 +79,8 @@ export default function PrototypeSwitcher() {
               bottom: '100%',
               right: 0,
               marginBottom: 8,
-              minWidth: 220,
+              minWidth: 260,
+              maxWidth: 320,
               background: '#fff',
               border: '1px solid #e0e0e0',
               borderRadius: 8,
@@ -123,66 +145,44 @@ export default function PrototypeSwitcher() {
               <LayoutGrid size={16} />
               Flow view
             </button>
-            {PROTOTYPES.length > 1 ? (
-              <>
-                <div
-                  style={{
-                    height: 1,
-                    background: '#e0e0e0',
-                    margin: '4px 0',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSelect('/prototype/des-57-procedures-v1')}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: 'none',
-                    background: 'transparent',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f5f5f5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  Home
-                </button>
-                {PROTOTYPES.map((p) => (
+            <div
+              style={{
+                height: 1,
+                background: '#e0e0e0',
+                margin: '4px 0',
+              }}
+            />
+            <div
+              style={{
+                maxHeight: 'min(52vh, 420px)',
+                overflowY: 'auto',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelect('/prototype')}
+                style={itemStyle(location.pathname === '/prototype')}
+                onMouseEnter={(e) => onItemHover(e, location.pathname === '/prototype')}
+                onMouseLeave={(e) => onItemLeave(e, location.pathname === '/prototype')}
+              >
+                All prototypes
+              </button>
+              {PROTOTYPES.map((p) => {
+                const active = isPrototypeActive(location.pathname, p);
+                return (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => handleSelect(p.path)}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: 'none',
-                      background: location.pathname === p.path ? '#F0F7FF' : 'transparent',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      borderRadius: 4,
-                      color: location.pathname === p.path ? '#4F6EF7' : 'inherit',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (location.pathname !== p.path) e.currentTarget.style.background = '#f5f5f5';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background =
-                        location.pathname === p.path ? '#F0F7FF' : 'transparent';
-                    }}
+                    style={itemStyle(active)}
+                    onMouseEnter={(e) => onItemHover(e, active)}
+                    onMouseLeave={(e) => onItemLeave(e, active)}
                   >
                     {p.title}
                   </button>
-                ))}
-              </>
-            ) : null}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -190,8 +190,8 @@ export default function PrototypeSwitcher() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label={PROTOTYPES.length > 1 ? 'Switch prototype' : 'View mode'}
-        title={PROTOTYPES.length > 1 ? 'Switch prototype concept' : 'Wireframe / flow view'}
+        aria-label="Switch prototype"
+        title="Switch prototype concept"
         style={{
           pointerEvents: 'auto',
           display: 'flex',

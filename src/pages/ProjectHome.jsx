@@ -101,7 +101,7 @@ function partsAssemblyIdForCadLabel(label) {
 }
 
 function editorHref(docName, empty = false, editorPath = DEFAULT_EDITOR_PATH, extra = {}) {
-  const defaultNav = String(editorPath).includes('des-57-procedures-v1-editor') ? 'doc' : 'cad';
+  const defaultNav = /(?:des-57-procedures-v1|assembly-map)-editor/.test(String(editorPath)) ? 'doc' : 'cad';
   const nav = extra?.nav != null && extra.nav !== '' ? String(extra.nav) : defaultNav;
   const q = new URLSearchParams({ nav, docName });
   if (empty) q.set('empty', '1');

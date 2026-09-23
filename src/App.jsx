@@ -74,9 +74,10 @@ export default function App() {
   const { conceptId } = usePrototype();
   const { viewMode } = useViewMode();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isDes57ProcedureEditor = conceptId === 'des-57-procedures-v1-editor';
+  const isProcedureLibraryEditor =
+    conceptId === 'des-57-procedures-v1-editor' || conceptId === 'assembly-map-editor';
   const [navActive, setNavActive] = useState(
-    isDes57ProcedureEditor ? 'doc' : (searchParams.get('nav') === 'cad' ? 'cad' : 'doc'),
+    isProcedureLibraryEditor ? 'doc' : (searchParams.get('nav') === 'cad' ? 'cad' : 'doc'),
   );
   const [docTitle, setDocTitle] = useState(searchParams.get('docName') ?? undefined);
   const emptyCad = searchParams.get('empty') === '1';
@@ -140,12 +141,12 @@ export default function App() {
       setNavActive('doc');
       return;
     }
-    if (isDes57ProcedureEditor) {
+    if (isProcedureLibraryEditor) {
       setNavActive(navParam === 'tools-bom' ? 'tools-bom' : 'doc');
       return;
     }
     setNavActive(navParam === 'cad' ? 'cad' : 'doc');
-  }, [isDes57ProcedureEditor, navParam, uploadedDocMode]);
+  }, [isProcedureLibraryEditor, navParam, uploadedDocMode]);
 
   useEffect(() => {
     if (des36StateParam) setDocLifecycle(des36StateParam);
@@ -577,12 +578,12 @@ export default function App() {
 
   const addPlacedItem = useCallback(({ type, src, svgContent, pageId, content }) => {
     const isText = type === 'text';
-    const resolvedPageId = pageId ?? (isText && isDes57ProcedureEditor ? activePageId : undefined);
+    const resolvedPageId = pageId ?? (isText && isProcedureLibraryEditor ? activePageId : undefined);
     const canvasSelector = resolvedPageId != null
       ? `.canvas[data-page-id="${String(resolvedPageId).replace(/"/g, '\\"')}"]`
       : '.canvas';
     const canvasEl = document.querySelector(canvasSelector) || document.querySelector('.canvas');
-    const centerOnPage = resolvedPageId != null || (isText && isDes57ProcedureEditor);
+    const centerOnPage = resolvedPageId != null || (isText && isProcedureLibraryEditor);
     const w = isText ? 280 : DEFAULT_WIDTH;
     const h = isText ? 120 : DEFAULT_HEIGHT;
     const maxLeft = canvasEl ? Math.max(0, canvasEl.clientWidth - w) : 800 - w;
@@ -607,7 +608,7 @@ export default function App() {
       ...prev,
       { id: nextId++, type, left, top, width: w, height: h, src, svgContent, pageId: resolvedPageId, content: type === 'text' ? (content ?? '') : undefined },
     ]);
-  }, [activePageId, isDes57ProcedureEditor, lastCanvasMouse.x, lastCanvasMouse.y]);
+  }, [activePageId, isProcedureLibraryEditor, lastCanvasMouse.x, lastCanvasMouse.y]);
 
   const removePlacedItem = useCallback((id) => {
     setPlacedItems((prev) => prev.filter((item) => item.id !== id));

@@ -1601,6 +1601,11 @@ button {
   background: var(--gray-100);
 }
 
+.toolbar-btn.toolbar-active {
+  background: var(--blue-light);
+  color: var(--blue-primary);
+}
+
 .toolbar-divider {
   width: 1px;
   height: 20px;

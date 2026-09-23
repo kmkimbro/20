@@ -4,6 +4,7 @@ export const DEFAULT_PROCEDURE_STORAGE_KEY = 'des57_procedures_v1';
 
 const EDITOR_PROCEDURE_STORAGE_KEYS = {
   'des-57-procedures-v1-editor': DEFAULT_PROCEDURE_STORAGE_KEY,
+  'assembly-map-editor': 'assembly_map',
 };
 
 export function resolveProcedureStorageKey({ queryKey, conceptId } = {}) {

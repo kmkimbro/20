@@ -20,10 +20,15 @@ export default function Header({
   publishStatusLabel = 'Unpublished',
   backTo = null,
   hideCadNav = false,
+  onBack = null,
 }) {
   const navigate = useNavigate();
   const [publishOpen, setPublishOpen] = useState(false);
   const handleBackToProjects = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (backTo) {
       navigate(backTo);
       return;
@@ -32,7 +37,7 @@ export default function Header({
       navigate(-1);
       return;
     }
-    navigate('/prototype/des-57-procedures-v1');
+    navigate('/prototype');
   };
 
   return (

@@ -3,11 +3,19 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import PrototypeProvider from './contexts/PrototypeProvider.jsx';
 import ViewModeProvider, { ViewModeRoot } from './contexts/ViewModeContext.jsx';
+import PrototypeDocumentTitle from './components/PrototypeDocumentTitle.jsx';
+import PrototypeGallery from './pages/PrototypeGallery.jsx';
+import { EDITOR_ONLY_PROTOTYPE_IDS } from './config/prototypes.js';
+import ProjectHome from './pages/ProjectHome.jsx';
+import Des36DocumentConnection from './pages/Des36DocumentConnection.jsx';
+import Megadocument from './pages/Megadocument.jsx';
+import Megadocument2 from './pages/Megadocument2.jsx';
 import Des57ProceduresV1 from './pages/Des57ProceduresV1.jsx';
+import AssemblyMap from './pages/AssemblyMap.jsx';
+import LayoutBuilder from './pages/LayoutBuilder.jsx';
+import MegadocumentEmptyState from './pages/MegadocumentEmptyState.jsx';
 import App from './App.jsx';
 import '../styles.css';
-
-const DES57_HOME = '/prototype/des-57-procedures-v1';
 
 class RootErrorBoundary extends React.Component {
   constructor(props) {
@@ -77,10 +85,33 @@ ReactDOM.createRoot(rootEl).render(
       <ViewModeProvider>
         <ViewModeRoot>
           <BrowserRouter>
+            <PrototypeDocumentTitle />
             <Routes>
-              <Route path="/" element={<Navigate to={DES57_HOME} replace />} />
-              <Route path="/prototype" element={<Navigate to={DES57_HOME} replace />} />
-              <Route path={DES57_HOME} element={<Des57ProceduresV1 />} />
+              <Route path="/" element={<Navigate to="/prototype" replace />} />
+              <Route path="/prototype" element={<PrototypeGallery />} />
+              <Route path="/prototype/des-36" element={<ProjectHome allowDeleteProjectsAndDocuments prdOnboarding />} />
+              <Route
+                path="/prototype/des-36-v2"
+                element={(
+                  <ProjectHome
+                    allowDeleteProjectsAndDocuments
+                    prdOnboarding
+                    projectConnectionGraph
+                  />
+                )}
+              />
+              <Route path="/prototype/des-36-document-connection" element={<Des36DocumentConnection />} />
+              <Route path="/prototype/megadocument" element={<Megadocument />} />
+              <Route path="/prototype/document-package" element={<Megadocument2 />} />
+              <Route path="/prototype/megadocument-2" element={<Navigate to="/prototype/document-package" replace />} />
+              <Route path="/prototype/des-57-procedures-v1" element={<Des57ProceduresV1 />} />
+              <Route path="/prototype/assembly-map" element={<AssemblyMap />} />
+              <Route path="/prototype/layout-builder" element={<LayoutBuilder />} />
+              <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
+              <Route
+                path="/prototype/tool-library-mid-fi"
+                element={<ProjectHome editorPrototypePath="/prototype/tool-library-mid-fi-editor" />}
+              />
               <Route
                 path="/prototype/des-57-procedures-v1-editor"
                 element={(
@@ -89,7 +120,26 @@ ReactDOM.createRoot(rootEl).render(
                   </PrototypeProvider>
                 )}
               />
-              <Route path="*" element={<Navigate to={DES57_HOME} replace />} />
+              <Route
+                path="/prototype/assembly-map-editor"
+                element={(
+                  <PrototypeProvider conceptId="assembly-map-editor">
+                    <App />
+                  </PrototypeProvider>
+                )}
+              />
+              {EDITOR_ONLY_PROTOTYPE_IDS.map((conceptId) => (
+                <Route
+                  key={conceptId}
+                  path={`/prototype/${conceptId}`}
+                  element={(
+                    <PrototypeProvider conceptId={conceptId}>
+                      <App />
+                    </PrototypeProvider>
+                  )}
+                />
+              ))}
+              <Route path="*" element={<Navigate to="/prototype" replace />} />
             </Routes>
           </BrowserRouter>
         </ViewModeRoot>
