@@ -570,6 +570,207 @@
   padding: 24px;
 }
 
+.lb-modal.is-grid {
+  width: min(760px, calc(100vw - 48px));
+}
+
+.lb-editor-split {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lb-live-preview-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 6px;
+}
+
+.lb-live-preview-stage {
+  background: #F4F5F7;
+  border-radius: 10px;
+  padding: 16px;
+  max-height: min(640px, calc(100vh - 180px));
+  overflow: auto;
+}
+
+.lb-sheet.is-live {
+  width: 100%;
+  min-height: 460px;
+  margin: 0;
+}
+
+.lb-rgl-wrap {
+  width: 100%;
+}
+
+.lb-page-preview {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  padding: 16px 18px 18px;
+}
+
+.lb-page-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 0 8px;
+}
+
+.lb-page-preview-head strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.lb-page-preview-head span,
+.lb-page-preview-body {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.lb-page-preview-body {
+  padding: 16px 2px;
+}
+
+.lb-rgl.lb-rgl-band {
+  min-height: 180px;
+  background: #eee;
+  border: none;
+  border-radius: 4px;
+}
+
+.lb-rgl .react-grid-item {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.lb-rgl .react-grid-item.is-unfilled {
+  background: #fff;
+}
+
+.lb-rgl .react-grid-item.is-unfilled .lb-editor-cell {
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+.lb-rgl .react-grid-item.react-draggable-dragging,
+.lb-rgl .react-grid-item.resizing {
+  z-index: 3;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.lb-rgl .react-resizable-handle {
+  z-index: 2;
+}
+
+.lb-rgl .react-grid-placeholder {
+  background: #ccc;
+  opacity: 0.5;
+  border-radius: 2px;
+}
+
+.lb-rgl .lb-editor-cell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #111827;
+}
+
+.lb-rgl .react-grid-item:hover .lb-editor-cell.is-empty {
+  color: #4F6EF7;
+}
+
+.lb-rgl .react-draggable-dragging .lb-editor-cell {
+  cursor: grabbing;
+}
+
+.lb-rgl-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.lb-rgl .react-grid-item:hover .lb-rgl-remove {
+  opacity: 1;
+}
+
+.lb-rgl-remove:hover {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+.lb-add-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.lb-add-cell:hover {
+  border-color: #4F6EF7;
+  color: #4F6EF7;
+}
+
+.lb-band-grid {
+  display: grid;
+}
+
+.lb-band-slot {
+  min-width: 0;
+  display: flex;
+}
+
+.lb-band-grid .lb-cell {
+  flex: 1;
+  width: 100%;
+  border-top: 1px solid #E5E7EB;
+  border-left: 1px solid #E5E7EB;
+}
+
+.lb-preview-guide {
+  box-shadow: inset -1px -1px 0 #E5E7EB;
+  min-height: 36px;
+}
+
+.lb-preview-band .lb-band-slot {
+  z-index: 1;
+}
+
+.lb-preview-band .lb-cell {
+  height: 100%;
+  border: 1px solid #D1D5DB;
+  background: #fff;
+}
+
 .lb-modal {
   width: min(560px, 100%);
   background: #fff;
@@ -655,6 +856,12 @@
   margin-top: 10px;
 }
 
+.lb-check input {
+  accent-color: #111827;
+  width: 16px;
+  height: 16px;
+}
+
 .lb-editor-grid {
   border: 1px solid #E5E7EB;
   border-radius: 10px;
@@ -701,6 +908,19 @@
   border-color: #E5E7EB;
   color: #111827;
   font-weight: 500;
+}
+
+.lb-rgl .lb-editor-cell,
+.lb-rgl .lb-editor-cell.has-token,
+.lb-rgl .lb-editor-cell:hover {
+  border: none;
+  background: transparent;
+  font-weight: 400;
+  color: #111827;
+}
+
+.lb-rgl .lb-editor-cell.is-empty {
+  color: #9CA3AF;
 }
 
 .lb-editor-cell img {

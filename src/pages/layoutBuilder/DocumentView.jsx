@@ -7,7 +7,7 @@ import {
 import Header from '../../components/Header.jsx';
 import {
   C, CURRENT_USER, DATE_FORMATS, PAGE_FORMATS, DOC_PAGES, PRINT_PAGES, DOC_TEMPLATES,
-  REF_DATE, formatDate, resolveToken, cellCount,
+  REF_DATE, formatDate, resolveToken, cellCount, GRID_COLS, gridRowCount,
 } from './model.js';
 import { LayoutThumb, placePop } from './shared.jsx';
 
@@ -422,6 +422,36 @@ function LayoutBand({
   onUploadLogo,
 }) {
   if (!layout) return null;
+  const items = Array.isArray(layout.items) && layout.items.length ? layout.items : null;
+  if (items) {
+    return (
+      <div
+        className="lb-band lb-band-grid"
+        style={{
+          gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${gridRowCount(items)}, minmax(32px, auto))`,
+        }}
+      >
+        {items.map((item) => (
+          <div key={item.id} className="lb-band-slot" style={{
+            gridColumn: `${item.x + 1} / span ${item.w}`,
+            gridRow: `${item.y + 1} / span ${item.h}`,
+          }}
+          >
+            <DocCell
+              token={item.token}
+              ctx={ctx}
+              values={values}
+              savedLogos={savedLogos}
+              placeholderHistory={placeholderHistory}
+              onChangeValue={onChangeValue}
+              onUploadLogo={onUploadLogo}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="lb-band">
       {layout.rows.map((row, ri) => (

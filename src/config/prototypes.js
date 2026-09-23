@@ -126,6 +126,13 @@ export const PROTOTYPES = [
     path: '/prototype/layout-builder',
   },
   {
+    id: 'layout-builder-2',
+    title: 'Layout Builder 2',
+    description:
+      'Copy of Header / Footer Layouts for iteration. Uses its own saved state (separate from the original layout builder).',
+    path: '/prototype/layout-builder-2',
+  },
+  {
     id: 'megadocument-empty',
     title: 'Megadocument — empty state',
     description:

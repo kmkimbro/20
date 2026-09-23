@@ -107,6 +107,7 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/des-57-procedures-v1" element={<Des57ProceduresV1 />} />
               <Route path="/prototype/assembly-map" element={<AssemblyMap />} />
               <Route path="/prototype/layout-builder" element={<LayoutBuilder />} />
+              <Route path="/prototype/layout-builder-2" element={<LayoutBuilder storageKey="layout_builder_v2" gridEditor />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route
                 path="/prototype/tool-library-mid-fi"

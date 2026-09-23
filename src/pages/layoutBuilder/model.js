@@ -91,7 +91,56 @@ export function tokenLabel(token) {
   return '';
 }
 
+export const GRID_COLS = 12;
+
+export function rowsToItems(rows) {
+  const items = [];
+  (rows || []).forEach((row, y) => {
+    const cells = row.length ? row : [null];
+    const base = Math.floor(GRID_COLS / cells.length);
+    let extra = GRID_COLS % cells.length;
+    let x = 0;
+    cells.forEach((token, ci) => {
+      const w = Math.max(1, base + (extra > 0 ? 1 : 0));
+      if (extra > 0) extra -= 1;
+      items.push({
+        id: `c-${y}-${ci}`,
+        x,
+        y,
+        w,
+        h: 1,
+        token: token || null,
+      });
+      x += w;
+    });
+  });
+  return items;
+}
+
+export function layoutItems(layout) {
+  if (Array.isArray(layout?.items) && layout.items.length) return layout.items;
+  return rowsToItems(layout?.rows || [[null]]);
+}
+
+export function itemsToRows(items) {
+  const byRow = new Map();
+  (items || []).forEach((item) => {
+    const list = byRow.get(item.y) || [];
+    list.push(item);
+    byRow.set(item.y, list);
+  });
+  const rows = [...byRow.keys()].sort((a, b) => a - b).map((y) => (
+    byRow.get(y).sort((a, b) => a.x - b.x).map((item) => item.token || null)
+  ));
+  return rows.length ? rows : [[null]];
+}
+
+export function gridRowCount(items) {
+  return (items || []).reduce((max, item) => Math.max(max, item.y + item.h), 1);
+}
+
 export function cellCount(layout) {
+  if (Array.isArray(layout?.items)) return layout.items.filter((item) => item?.token).length;
   return (layout?.rows || []).reduce((n, row) => n + row.filter(Boolean).length, 0);
 }
 
@@ -140,7 +189,7 @@ export function resolveToken(token, ctx) {
   if (token.type === 'placeholder') {
     const isImage = Boolean(token.isImage || token.id === 'logo');
     if (isImage) {
-      const src = ctx.values?.[token.id] || null;
+      const src = ctx.values?.[token.id] || token.src || null;
       return { kind: 'image', filled: Boolean(src), src, label: token.label || 'Logo', id: token.id };
     }
     let val = ctx.values?.[token.id];
@@ -247,9 +296,9 @@ export function seedState() {
   };
 }
 
-export function loadState() {
+export function loadState(key = STORAGE_KEY) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return seedState();
     const parsed = JSON.parse(raw);
     const base = seedState();
@@ -269,9 +318,9 @@ export function loadState() {
   }
 }
 
-export function saveState(state) {
+export function saveState(state, key = STORAGE_KEY) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(key, JSON.stringify(state));
   } catch {
     /* ignore quota */
   }

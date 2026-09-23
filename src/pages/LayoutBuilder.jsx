@@ -7,7 +7,7 @@ import {
 import Header from '../components/Header.jsx';
 import PrototypeSwitcher from '../components/PrototypeSwitcher.jsx';
 import {
-  C, loadState, saveState, uid, cellCount, layoutDocCount, DOC_TEMPLATES,
+  C, STORAGE_KEY, loadState, saveState, uid, cellCount, layoutDocCount, DOC_TEMPLATES,
 } from './layoutBuilder/model.js';
 import { LayoutSwatches, typeTag } from './layoutBuilder/shared.jsx';
 import LayoutEditor from './layoutBuilder/LayoutEditor.jsx';
@@ -36,8 +36,8 @@ function LibraryPlaceholder({ title, body }) {
   );
 }
 
-export default function LayoutBuilder() {
-  const [state, setState] = useState(loadState);
+export default function LayoutBuilder({ storageKey = STORAGE_KEY, gridEditor = false } = {}) {
+  const [state, setState] = useState(() => loadState(storageKey));
   const [view, setView] = useState('home');
   const [activeDocId, setActiveDocId] = useState(null);
   const [librariesOpen, setLibrariesOpen] = useState(true);
@@ -49,7 +49,7 @@ export default function LayoutBuilder() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [placeholderHistory, setPlaceholderHistory] = useState({});
 
-  useEffect(() => { saveState(state); }, [state]);
+  useEffect(() => { saveState(state, storageKey); }, [state, storageKey]);
 
   const update = useCallback((patch) => {
     setState((prev) => (typeof patch === 'function' ? patch(prev) : { ...prev, ...patch }));
@@ -204,8 +204,10 @@ export default function LayoutBuilder() {
           <LayoutEditor
             initial={editor.layout}
             presetType={editor.type}
+            grid={gridEditor}
             savedConsts={state.savedConsts}
             savedPlaceholders={state.savedPlaceholders}
+            savedLogos={state.savedLogos}
             onSave={(layout) => saveLayout(layout, editor.type)}
             onCreatePlaceholder={(token) => {
               update((prev) => ({
@@ -215,6 +217,7 @@ export default function LayoutBuilder() {
                   label: token.label,
                   defaultVal: token.defaultVal,
                   isImage: token.isImage,
+                  src: token.src,
                 }],
               }));
             }}
@@ -449,8 +452,10 @@ export default function LayoutBuilder() {
         <LayoutEditor
           initial={editor.layout}
           presetType={editor.type}
+          grid={gridEditor}
           savedConsts={state.savedConsts}
           savedPlaceholders={state.savedPlaceholders}
+          savedLogos={state.savedLogos}
           onSave={(layout) => saveLayout(layout, editor.type)}
           onCreatePlaceholder={(token) => {
             update((prev) => ({
@@ -460,6 +465,7 @@ export default function LayoutBuilder() {
                 label: token.label,
                 defaultVal: token.defaultVal,
                 isImage: token.isImage,
+                src: token.src,
               }],
             }));
           }}

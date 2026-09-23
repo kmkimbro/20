@@ -1,4 +1,4 @@
-import { tokenLabel } from './model.js';
+import { GRID_COLS, gridRowCount, tokenLabel } from './model.js';
 
 export function swatchType(token) {
   if (!token) return 'empty';
@@ -9,7 +9,40 @@ export function swatchType(token) {
   return 'empty';
 }
 
+function gridStyle(items, rowPx) {
+  return {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${gridRowCount(items)}, ${rowPx}px)`,
+    gap: 3,
+  };
+}
+
+function gridPlacement(item) {
+  return {
+    gridColumn: `${item.x + 1} / span ${item.w}`,
+    gridRow: `${item.y + 1} / span ${item.h}`,
+    minWidth: 0,
+  };
+}
+
 export function LayoutThumb({ layout, compact = false }) {
+  const items = Array.isArray(layout?.items) && layout.items.length ? layout.items : null;
+  if (items) {
+    return (
+      <div className="lb-thumb" style={gridStyle(items, compact ? 14 : 18)}>
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={`lb-pill${swatchType(item.token) === 'logo' ? ' is-logo' : ''}`}
+            style={gridPlacement(item)}
+          >
+            {tokenLabel(item.token)}
+          </div>
+        ))}
+      </div>
+    );
+  }
   const rows = layout?.rows || [];
   return (
     <div className="lb-thumb" style={compact ? { gap: 4 } : undefined}>
@@ -31,6 +64,20 @@ export function LayoutThumb({ layout, compact = false }) {
 }
 
 export function LayoutSwatches({ layout }) {
+  const items = Array.isArray(layout?.items) && layout.items.length ? layout.items : null;
+  if (items) {
+    return (
+      <div className="lb-swatches" style={gridStyle(items, 18)}>
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={`lb-swatch type-${swatchType(item.token)}`}
+            style={gridPlacement(item)}
+          />
+        ))}
+      </div>
+    );
+  }
   const rows = layout?.rows || [];
   return (
     <div className="lb-swatches">

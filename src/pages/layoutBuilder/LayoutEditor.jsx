@@ -1,11 +1,70 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import GridLayout, { WidthProvider } from 'react-grid-layout';
 import {
-  X, Plus, Minus, ChevronLeft, Calendar, Hash, Type, User, Image as ImageIcon, Check, FileText, Upload,
+  X, Plus, Minus, ChevronLeft, ChevronDown, Calendar, Hash, Type, User, Image as ImageIcon, Check, FileText, Upload,
 } from 'lucide-react';
 import {
-  C, cloneLayout, emptyLayout, tokenLabel, uid, DATE_FORMATS, PAGE_FORMATS, formatDate, REF_DATE,
+  C, AURORA_LOGO, CURRENT_USER, GRID_COLS, cloneLayout, emptyLayout, gridRowCount, itemsToRows, layoutItems, resolveToken,
+  tokenLabel, uid, DATE_FORMATS, PAGE_FORMATS, formatDate, REF_DATE,
 } from './model.js';
 import { placePop } from './shared.jsx';
+import 'react-grid-layout/css/styles.css';
+
+const DragGrid = WidthProvider(GridLayout);
+
+const PREVIEW_CTX = {
+  date: REF_DATE,
+  pageIndex: 1,
+  pageCount: 2,
+  user: CURRENT_USER,
+  docName: 'Test Document 1',
+  values: {
+    date_format: 'us',
+    page_format: 'pageNofM',
+    logo: AURORA_LOGO,
+    revision: 'Rev C',
+    nda: 'Confidential — NDA applies',
+  },
+};
+
+function cellAlign(item) {
+  if (item.x > 0 && item.x + item.w >= GRID_COLS) return 'flex-end';
+  if (item.x > 0) return 'center';
+  return 'flex-start';
+}
+
+function gridPlaceholder(token) {
+  if (!token) return 'Add content';
+  if (token.type === 'builtin' && token.id === 'page') return 'PAGE';
+  if (token.type === 'builtin' && token.id === 'date') return 'DATE';
+  if (token.type === 'builtin' && token.id === 'author') return 'AUTHOR';
+  if (token.type === 'placeholder' && (token.isImage || token.id === 'logo')) return 'LOGO';
+  return token.label || tokenLabel(token) || 'Value';
+}
+
+function previewCtxFor(token) {
+  const values = { ...PREVIEW_CTX.values };
+  if (token?.id === 'page') values.page_format = token.format || values.page_format;
+  if (token?.id === 'date') values.date_format = token.format || values.date_format;
+  if ((token?.isImage || token?.id === 'logo') && token.src) values[token.id] = token.src;
+  return { ...PREVIEW_CTX, values };
+}
+
+function previewOf(token) {
+  if (!token) return { empty: true, text: 'Add content' };
+  const resolved = resolveToken(token, previewCtxFor(token));
+  if (resolved.kind === 'image') {
+    return {
+      image: resolved.filled ? resolved.src : null,
+      text: resolved.label || 'Logo',
+      unfilled: !resolved.filled,
+    };
+  }
+  if (!resolved.filled) {
+    return { text: resolved.label || tokenLabel(token) || 'Add content', unfilled: true };
+  }
+  return { text: resolved.text, kind: resolved.kind };
+}
 
 const PLACEHOLDER_BUILTINS = [
   { id: 'date', label: 'Date', Icon: Calendar, mode: 'date' },
@@ -34,6 +93,7 @@ export function CellPicker({
   current,
   savedConsts,
   savedPlaceholders,
+  savedLogos = [],
   onPick,
   onCreatePlaceholder,
   onCreateConst,
@@ -42,6 +102,7 @@ export function CellPicker({
 }) {
   const ref = useRef(null);
   const fileRef = useRef(null);
+  const logoFileRef = useRef(null);
   const [view, setView] = useState('root');
   const [phName, setPhName] = useState('');
   const [phDefault, setPhDefault] = useState('');
@@ -54,13 +115,13 @@ export function CellPicker({
 
   useEffect(() => {
     const onDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target) && !anchorEl?.contains?.(e.target)) onClose();
+      if (ref.current && !ref.current.contains(e.target)) onClose();
     };
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('mousedown', onDown);
+    document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey);
     };
   }, [anchorEl, onClose]);
@@ -99,9 +160,8 @@ export function CellPicker({
                   if (item.mode === 'date') setView('date');
                   else if (item.mode === 'page') setView('page');
                   else if (item.mode === 'docname') setView('docname');
-                  else if (item.mode === 'logo') {
-                    onPick({ type: 'placeholder', id: 'logo', label: 'Logo', isImage: true });
-                  } else {
+                  else if (item.mode === 'logo') setView('logo');
+                  else {
                     onPick({ type: 'placeholder', id: item.id, label: item.label });
                   }
                 }}
@@ -112,7 +172,7 @@ export function CellPicker({
           {savedPlaceholders.filter((p) => !['revision', 'lot', 'logo', 'docname'].includes(p.id)).map((p) => (
             <PopItem
               key={p.id}
-              icon={<FileText size={14} color={C.sub} />}
+              icon={p.isImage ? <ImageIcon size={14} color={C.sub} /> : <FileText size={14} color={C.sub} />}
               label={p.label}
               sub={p.defaultVal || (p.isImage ? 'Image' : null)}
               onClick={() => onPick({
@@ -121,6 +181,7 @@ export function CellPicker({
                 label: p.label,
                 defaultVal: p.defaultVal,
                 isImage: p.isImage,
+                src: p.src,
                 savedValues: p.savedValues,
               })}
             />
@@ -176,6 +237,48 @@ export function CellPicker({
               onClick={() => pickPage(f.id)}
             />
           ))}
+        </>
+      )}
+
+      {view === 'logo' && (
+        <>
+          <button type="button" className="lb-pop-back" onClick={() => setView('root')}>
+            <ChevronLeft size={14} /> Logo
+          </button>
+          {savedLogos.length ? (
+            <div className="lb-logo-grid">
+              {savedLogos.map((src) => (
+                <button
+                  key={src.slice(0, 64)}
+                  type="button"
+                  className={`lb-logo-opt${current?.src === src ? ' is-selected' : ''}`}
+                  onClick={() => onPick({ type: 'placeholder', id: 'logo', label: 'Logo', isImage: true, src })}
+                >
+                  <img src={src} alt="" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="lb-form">
+            <button type="button" className="lb-dropzone" onClick={() => logoFileRef.current?.click()}>
+              <Upload size={14} style={{ marginBottom: 4 }} />
+              <div>Upload new logo</div>
+            </button>
+            <input
+              ref={logoFileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => onCreateLogo?.(String(reader.result));
+                reader.readAsDataURL(file);
+              }}
+            />
+          </div>
         </>
       )}
 
@@ -283,8 +386,16 @@ export function CellPicker({
             disabled={!phName.trim() && !phImage}
             onClick={() => {
               if (phImage) {
+                const token = {
+                  type: 'placeholder',
+                  id: uid('ph'),
+                  label: phName.trim() || 'Logo',
+                  isImage: true,
+                  src: phImage,
+                };
                 onCreateLogo?.(phImage);
-                onPick({ type: 'placeholder', id: 'logo', label: phName.trim() || 'Logo', isImage: true });
+                onCreatePlaceholder(token, phSave);
+                onPick(token);
                 return;
               }
               const token = {
@@ -305,21 +416,307 @@ export function CellPicker({
   );
 }
 
+function GridCanvas({ items, onLayoutChange, onOpen, onClose, onRemove, onAdd, menuOpen }) {
+  const press = useRef(null);
+  const onOpenRef = useRef(onOpen);
+  const onCloseRef = useRef(onClose);
+  const menuOpenRef = useRef(menuOpen);
+  onOpenRef.current = onOpen;
+  onCloseRef.current = onClose;
+  menuOpenRef.current = menuOpen;
+  const layout = items.map((item) => ({
+    i: item.id,
+    x: item.x,
+    y: item.y,
+    w: item.w,
+    h: item.h,
+    minW: 2,
+    minH: 1,
+  }));
+
+  useEffect(() => {
+    const onMove = (e) => {
+      const current = press.current;
+      if (!current) return;
+      if (Math.abs(e.clientX - current.x) > 4 || Math.abs(e.clientY - current.y) > 4) {
+        current.moved = true;
+      }
+    };
+    const onUp = () => {
+      const current = press.current;
+      press.current = null;
+      if (!current || current.moved) return;
+      if (current.menuWasOpen) onCloseRef.current();
+      else onOpenRef.current(current.id, current.el);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+
+  return (
+    <div className="lb-rgl-wrap">
+      <DragGrid
+        className="lb-rgl lb-rgl-band"
+        cols={12}
+        rowHeight={48}
+        margin={[10, 10]}
+        containerPadding={[10, 10]}
+        layout={layout}
+        onLayoutChange={onLayoutChange}
+        draggableCancel=".lb-rgl-remove"
+        compactType="vertical"
+      >
+        {items.map((item) => (
+          <div key={item.id} className={item.token ? '' : 'is-unfilled'}>
+            <button
+              type="button"
+              className={`lb-editor-cell${item.token ? ' has-token' : ' is-empty'}`}
+              style={{ justifyContent: 'center' }}
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                press.current = {
+                  id: item.id,
+                  el: e.currentTarget,
+                  x: e.clientX,
+                  y: e.clientY,
+                  moved: false,
+                  menuWasOpen: menuOpenRef.current,
+                };
+              }}
+            >
+              {gridPlaceholder(item.token)}
+            </button>
+              <button
+                type="button"
+                className="lb-rgl-remove"
+                aria-label="Remove cell"
+                onClick={() => onRemove(item.id)}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <X size={12} />
+              </button>
+            </div>
+        ))}
+      </DragGrid>
+      <button type="button" className="lb-add-cell" onClick={onAdd}>
+        <Plus size={14} />
+        Add cell
+      </button>
+    </div>
+  );
+}
+
+function PreviewFormatMenu({ kind, current, onSelect, onClose, anchorEl }) {
+  const ref = useRef(null);
+  const pos = placePop(anchorEl);
+  const options = kind === 'date'
+    ? DATE_FORMATS.map((f) => ({ id: f.id, label: formatDate(REF_DATE, f.id) }))
+    : PAGE_FORMATS.map((f) => ({
+      id: f.id,
+      label: f.id === 'n' ? '1'
+        : f.id === 'nOfM' ? '1 of 2'
+          : f.id === 'pageN' ? 'Page 1'
+            : 'Page 1 of 2',
+    }));
+
+  useEffect(() => {
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [anchorEl, onClose]);
+
+  return (
+    <div ref={ref} className="lb-pop" style={{ top: pos.top, left: pos.left, width: 180 }} onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+      <div className="lb-pop-section">{kind === 'date' ? 'Date' : 'Page'}</div>
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          className={`lb-pop-item${current === option.id ? ' is-active' : ''}`}
+          onClick={() => onSelect(option.id)}
+        >
+          <span className="label">{option.label}</span>
+          {current === option.id ? <Check size={14} className="lb-pop-check" /> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PreviewValue({ item, onFormat }) {
+  const elRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const preview = previewOf(item.token);
+  const kind = preview.kind;
+  const canFormat = kind === 'page' || kind === 'date';
+  const current = item.token?.format || (kind === 'page' ? 'pageNofM' : 'us');
+
+  return (
+    <div
+      ref={elRef}
+      className={`lb-cell${preview.unfilled ? ' is-unfilled' : ''}${canFormat ? ` is-interactive is-${kind}${open ? ' is-open' : ''}` : ''}`}
+      style={{ justifyContent: cellAlign(item) }}
+      role={canFormat ? 'button' : undefined}
+      tabIndex={canFormat ? 0 : undefined}
+      onClick={canFormat ? () => setOpen(true) : undefined}
+      onKeyDown={canFormat ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setOpen(true);
+        }
+      } : undefined}
+    >
+      {preview.image ? <img className="lb-logo" src={preview.image} alt="" /> : null}
+      {!preview.image && canFormat ? (
+        <>
+          <span className="lb-cell-plain">{preview.text}</span>
+          <span className="lb-cell-affordance">
+            {preview.text}
+            <ChevronDown size={12} />
+          </span>
+        </>
+      ) : null}
+      {!preview.image && !canFormat && !preview.empty ? preview.text : null}
+      {open && canFormat ? (
+        <PreviewFormatMenu
+          kind={kind}
+          current={current}
+          anchorEl={elRef.current}
+          onSelect={(format) => {
+            onFormat(item.id, format);
+            setOpen(false);
+          }}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function PreviewBand({ items, onFormat }) {
+  const rows = Math.max(gridRowCount(items), 1);
+  return (
+    <div
+      className="lb-band lb-band-grid lb-preview-band"
+      style={{
+        gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${rows}, minmax(36px, auto))`,
+      }}
+    >
+      {items.map((item) => (
+          <div
+            key={item.id}
+            className="lb-band-slot"
+            style={{
+              gridColumn: `${item.x + 1} / span ${item.w}`,
+              gridRow: `${item.y + 1} / span ${item.h}`,
+            }}
+          >
+            <PreviewValue item={item} onFormat={onFormat} />
+          </div>
+      ))}
+    </div>
+  );
+}
+
+function LivePreview({ items, layoutType, onFormat }) {
+  const isFooter = layoutType === 'footer';
+  return (
+    <div className="lb-live-preview">
+      <div className="lb-live-preview-label">Preview</div>
+      <div className="lb-live-preview-stage">
+        <article className="lb-sheet is-live">
+          <div className="lb-sheet-head">
+            <h2>Operation 2</h2>
+            <span>Created Dec 21, 2024</span>
+          </div>
+          {isFooter ? null : <PreviewBand items={items} onFormat={onFormat} />}
+          <div className="lb-sheet-body">
+            <div className="lb-body-row">
+              <div className="lb-parts">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Part Name</th>
+                      <th>QTY</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span className="lb-id">A</span></td>
+                      <td>Screw</td>
+                      <td>4</td>
+                    </tr>
+                    <tr>
+                      <td><span className="lb-id">B</span></td>
+                      <td>Loctite 222</td>
+                      <td>1</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="lb-tools">
+                <strong>Tools</strong>
+                3.5mm driver
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 'auto', paddingBottom: 16 }}>
+            {isFooter ? <PreviewBand items={items} onFormat={onFormat} /> : null}
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}
+
 export default function LayoutEditor({
   initial,
   presetType = '',
+  grid = false,
   savedConsts,
   savedPlaceholders,
+  savedLogos,
   onSave,
   onCreatePlaceholder,
   onCreateConst,
   onCreateLogo,
   onClose,
 }) {
-  const [draft, setDraft] = useState(() => (
-    initial ? cloneLayout(initial) : emptyLayout(presetType)
-  ));
+  const [draft, setDraft] = useState(() => {
+    const base = initial ? cloneLayout(initial) : emptyLayout(presetType);
+    if (!grid && Array.isArray(base.items) && base.items.length) {
+      base.rows = itemsToRows(base.items);
+      delete base.items;
+    }
+    return base;
+  });
+  const [items, setItems] = useState(() => (grid ? layoutItems(initial || emptyLayout(presetType)) : []));
   const [picker, setPicker] = useState(null);
+
+  useEffect(() => {
+    if (!picker) return undefined;
+    const onPointerDown = (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('.lb-pop') || target.closest('.lb-editor-cell')) return;
+      setPicker(null);
+    };
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => window.removeEventListener('pointerdown', onPointerDown, true);
+  }, [picker]);
 
   const setCell = (ri, ci, token) => {
     setDraft((prev) => {
@@ -358,10 +755,46 @@ export default function LayoutEditor({
     });
   };
 
+  const syncItems = (next) => {
+    setItems((prev) => {
+      let changed = false;
+      const mapped = prev.map((item) => {
+        const hit = next.find((entry) => entry.i === item.id);
+        if (!hit) return item;
+        if (hit.x === item.x && hit.y === item.y && hit.w === item.w && hit.h === item.h) return item;
+        changed = true;
+        return { ...item, x: hit.x, y: hit.y, w: hit.w, h: hit.h };
+      });
+      return changed ? mapped : prev;
+    });
+  };
+
+  const addGridCell = () => {
+    setItems((prev) => {
+      const y = prev.reduce((max, item) => Math.max(max, item.y + item.h), 0);
+      return [...prev, { id: uid('cell'), x: 0, y, w: 4, h: 1, token: null }];
+    });
+  };
+
+  const removeGridCell = (id) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    setPicker((current) => (current?.id === id ? null : current));
+  };
+
+  const setGridToken = (id, token) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, token } : item)));
+  };
+
+  const setItemFormat = (id, format) => {
+    setItems((prev) => prev.map((item) => (
+      item.id === id && item.token ? { ...item, token: { ...item.token, format } } : item
+    )));
+  };
+
   return (
     <div className="lb-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} role="presentation">
       <div
-        className="lb-modal"
+        className={`lb-modal${grid ? ' is-grid' : ''}`}
         role="dialog"
         aria-label={initial ? 'Edit layout' : 'Create New Layout'}
         onMouseDown={(e) => e.stopPropagation()}
@@ -373,6 +806,8 @@ export default function LayoutEditor({
           </button>
         </div>
         <div className="lb-modal-body">
+          <div className={grid ? 'lb-editor-split' : undefined}>
+            <div>
           <div className="lb-field">
             <label htmlFor="lb-lay-name">Name</label>
             <input
@@ -397,6 +832,17 @@ export default function LayoutEditor({
           </div>
           <div className="lb-field">
             <label>Rows &amp; Columns</label>
+            {grid ? (
+              <GridCanvas
+                items={items}
+                onLayoutChange={syncItems}
+                onOpen={(id, el) => setPicker({ id, el })}
+                onClose={() => setPicker(null)}
+                onRemove={removeGridCell}
+                onAdd={addGridCell}
+                menuOpen={!!picker}
+              />
+            ) : (
             <div className="lb-editor-grid">
               {draft.rows.map((row, ri) => (
                 <div key={ri} className="lb-editor-row">
@@ -432,13 +878,21 @@ export default function LayoutEditor({
                 <Plus size={14} />
               </button>
             </div>
+            )}
+          </div>
+            </div>
+            {grid ? <LivePreview items={items} layoutType={draft.type} onFormat={setItemFormat} /> : null}
           </div>
         </div>
         <div className="lb-modal-foot">
           <button
             type="button"
             className="lb-btn-primary"
-            onClick={() => onSave({ ...draft, name: draft.name.trim() || 'Untitled Layout' })}
+            onClick={() => onSave({
+              ...draft,
+              name: draft.name.trim() || 'Untitled Layout',
+              ...(grid ? { items } : {}),
+            })}
           >
             Save Layout
           </button>
@@ -447,11 +901,13 @@ export default function LayoutEditor({
       {picker && (
         <CellPicker
           anchorEl={picker.el}
-          current={draft.rows[picker.ri][picker.ci]}
+          current={grid ? items.find((item) => item.id === picker.id)?.token : draft.rows[picker.ri][picker.ci]}
           savedConsts={savedConsts}
           savedPlaceholders={savedPlaceholders}
+          savedLogos={savedLogos}
           onPick={(token) => {
-            setCell(picker.ri, picker.ci, token);
+            if (grid) setGridToken(picker.id, token);
+            else setCell(picker.ri, picker.ci, token);
             setPicker(null);
           }}
           onCreatePlaceholder={(token, save) => {
