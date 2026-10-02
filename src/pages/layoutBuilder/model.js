@@ -135,6 +135,15 @@ export function itemsToRows(items) {
   return rows.length ? rows : [[null]];
 }
 
+export function blockJustify(item) {
+  if (item?.align === 'center') return 'center';
+  if (item?.align === 'right') return 'flex-end';
+  if (item?.align === 'left') return 'flex-start';
+  if (item?.x > 0 && item.x + item.w >= GRID_COLS) return 'flex-end';
+  if (item?.x > 0) return 'center';
+  return 'flex-start';
+}
+
 export function gridRowCount(items) {
   return (items || []).reduce((max, item) => Math.max(max, item.y + item.h), 1);
 }

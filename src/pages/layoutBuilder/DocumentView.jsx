@@ -5,11 +5,31 @@ import {
   Camera, Type, Table, ArrowUpRight, Users, Star, Send,
 } from 'lucide-react';
 import Header from '../../components/Header.jsx';
+import CadView from '../../components/CadView.jsx';
 import {
   C, CURRENT_USER, DATE_FORMATS, PAGE_FORMATS, DOC_PAGES, PRINT_PAGES, DOC_TEMPLATES,
-  REF_DATE, formatDate, resolveToken, cellCount, GRID_COLS, gridRowCount,
+  REF_DATE, formatDate, resolveToken, cellCount, GRID_COLS, gridRowCount, blockJustify,
 } from './model.js';
 import { LayoutThumb, placePop } from './shared.jsx';
+
+function PlanShot({ index }) {
+  const scenes = [
+    { body: 'M70 118 L150 78 L230 118 L150 158 Z', accent: 'M150 78 L150 118 L230 158', label: 'Frame on fixture' },
+    { body: 'M64 130 L160 82 L248 126 L152 174 Z', accent: 'M160 82 L196 100 L248 126 M196 100 L196 148', label: 'Flange fasteners' },
+    { body: 'M90 150 L170 108 L250 150 L170 192 Z', accent: 'M170 48 L170 108', label: 'Dowel press' },
+    { body: 'M58 124 L150 76 L242 124 L150 172 Z', accent: 'M58 124 L242 124', label: 'Datum contact' },
+  ];
+  const scene = scenes[index % scenes.length];
+  return (
+    <svg viewBox="0 0 320 220" role="img" aria-label={`CAD screenshot, ${scene.label}`}>
+      <rect width="320" height="220" fill="#F4F6FB" />
+      <path d="M16 16 H304 V204 H16 Z" fill="none" stroke="#E5E7EB" />
+      <path d={scene.body} fill="#E8EEFF" stroke="#3F50DB" strokeWidth="1.6" />
+      <path d={scene.accent} fill="none" stroke="#3F50DB" strokeWidth="1.6" />
+      <circle cx="150" cy="118" r="3" fill="#3F50DB" />
+    </svg>
+  );
+}
 
 function CubeShot() {
   return (
@@ -348,7 +368,10 @@ function DocCell({
     <div
       ref={elRef}
       className={`lb-cell${interactive ? ' is-interactive' : ''}${kindClass}${menu ? ' is-open' : ''}${resolved.filled ? '' : ' is-unfilled'}`}
-      style={align ? { justifyContent: align } : undefined}
+      style={align ? {
+        justifyContent: align,
+        textAlign: align === 'flex-end' ? 'right' : align === 'center' ? 'center' : 'left',
+      } : undefined}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? ariaName : undefined}
@@ -440,6 +463,7 @@ function LayoutBand({
           >
             <DocCell
               token={item.token}
+              align={blockJustify(item)}
               ctx={ctx}
               values={values}
               savedLogos={savedLogos}
@@ -638,11 +662,23 @@ export default function DocumentView({
   onApplyTemplate,
   onNewLayout,
   onTogglePanel,
+  planSteps = null,
+  planScope = null,
+  awaitingPlan = false,
 }) {
   const [nav, setNav] = useState('doc');
   const [activePage, setActivePage] = useState('op2');
   const [panelTab, setPanelTab] = useState('layouts');
-  const pageCount = PRINT_PAGES.length;
+  const hasOps = Array.isArray(planSteps) && planSteps.length > 0;
+  const generated = hasOps && planScope !== 'operations';
+  const pageCount = generated ? planSteps.length : PRINT_PAGES.length;
+  const cadOps = hasOps
+    ? planSteps.map((step) => ({
+      id: `plan-${step.step}`,
+      label: `Step ${step.step} — ${step.title}`,
+      parts: (step.parts || []).map((name) => ({ name })),
+    }))
+    : [];
 
   const ctxFor = (pageIndex) => ({
     values,
@@ -652,6 +688,10 @@ export default function DocumentView({
     user: CURRENT_USER,
     date: REF_DATE,
   });
+
+  useEffect(() => {
+    if (planScope === 'operations' || planScope === 'document') setNav('cad');
+  }, [planScope]);
 
   const visibleSheets = activePage === 'op2' || activePage === 'op2-sub'
     ? PRINT_PAGES
@@ -665,6 +705,11 @@ export default function DocumentView({
         onBack={onBack}
       />
       {nav === 'cad' ? (
+        hasOps ? (
+          <div className="lb-cad-host">
+            <CadView operations={cadOps} docTitle={doc.name} />
+          </div>
+        ) : (
         <div className="lb-cad-placeholder">
           <div style={{ textAlign: 'center' }}>
             <Box size={28} color={C.blue} style={{ marginBottom: 8 }} />
@@ -672,11 +717,29 @@ export default function DocumentView({
             <button type="button" className="lb-btn-ghost" onClick={() => setNav('doc')}>Back to document</button>
           </div>
         </div>
+        )
       ) : (
         <div className="lb-doc">
           <aside className="lb-doc-tree">
             <div className="lb-tree-title">{doc.name}</div>
-            {DOC_PAGES.map((page) => {
+            {generated ? planSteps.map((step) => (
+              <button
+                key={step.step}
+                type="button"
+                className="lb-tree-item"
+                onClick={() => {
+                  document.getElementById(`plan-step-${step.step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              >
+                <FileText size={14} />
+                {`Step ${step.step}`}
+              </button>
+            )) : planScope === 'operations' ? (
+              <button type="button" className="lb-tree-item is-active">
+                <FileText size={14} />
+                Document
+              </button>
+            ) : DOC_PAGES.map((page) => {
               if (page.kind === 'sub') return null;
               const Icon = TREE_ICONS[page.id] || FileText;
               const child = DOC_PAGES.find((p) => p.parent === page.id);
@@ -707,7 +770,37 @@ export default function DocumentView({
           <div className="lb-doc-stage">
             <LayoutDocToolbar panelOpen={panelOpen} onTogglePanel={onTogglePanel} />
             <div className="lb-doc-canvas">
-              {visibleSheets.map((page) => (
+              {generated ? planSteps.map((step, index) => (
+                <article key={step.step} id={`plan-step-${step.step}`} className="lb-sheet">
+                  <div className="lb-sheet-head">
+                    <h2>{`Step ${step.step} — ${step.title}`}</h2>
+                    <span>CAD screenshot</span>
+                  </div>
+                  <div className="lb-sheet-body">
+                    <div className="lb-plan-figure">
+                      <PlanShot index={index} />
+                      <div className="lb-plan-caption">{step.title}</div>
+                    </div>
+                  </div>
+                </article>
+              )) : planScope === 'operations' ? (
+                <article className="lb-sheet">
+                  <div className="lb-sheet-head">
+                    <h2>{doc.name}</h2>
+                    <span>Created {doc.created}</span>
+                  </div>
+                </article>
+              ) : awaitingPlan ? (
+                <article className="lb-sheet">
+                  <div className="lb-sheet-head">
+                    <h2>{doc.name}</h2>
+                    <span>Created {doc.created}</span>
+                  </div>
+                  <div className="lb-sheet-body">
+                    <p style={{ fontSize: 13, color: C.muted }}>Accept the assembly plan to place the screenshots.</p>
+                  </div>
+                </article>
+              ) : visibleSheets.map((page) => (
                 <article key={page.id} className={`lb-sheet${page.isSub ? ' is-sub' : ''}`}>
                   {page.isSub ? <div className="lb-sheet-label">Sub-page 1</div> : null}
                   <div className="lb-sheet-head">

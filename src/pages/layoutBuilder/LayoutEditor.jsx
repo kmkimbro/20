@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import GridLayout, { WidthProvider } from 'react-grid-layout';
 import {
   X, Plus, Minus, ChevronLeft, ChevronDown, Calendar, Hash, Type, User, Image as ImageIcon, Check, FileText, Upload,
+  AlignLeft, AlignCenter, AlignRight,
 } from 'lucide-react';
 import {
-  C, AURORA_LOGO, CURRENT_USER, GRID_COLS, cloneLayout, emptyLayout, gridRowCount, itemsToRows, layoutItems, resolveToken,
+  C, AURORA_LOGO, CURRENT_USER, GRID_COLS, blockJustify, cloneLayout, emptyLayout, gridRowCount, itemsToRows, layoutItems, resolveToken,
   tokenLabel, uid, DATE_FORMATS, PAGE_FORMATS, formatDate, REF_DATE,
 } from './model.js';
 import { placePop } from './shared.jsx';
@@ -27,10 +28,12 @@ const PREVIEW_CTX = {
   },
 };
 
-function cellAlign(item) {
-  if (item.x > 0 && item.x + item.w >= GRID_COLS) return 'flex-end';
-  if (item.x > 0) return 'center';
-  return 'flex-start';
+function alignStyle(item) {
+  const justify = blockJustify(item);
+  return {
+    justifyContent: justify,
+    textAlign: justify === 'flex-end' ? 'right' : justify === 'center' ? 'center' : 'left',
+  };
 }
 
 function gridPlaceholder(token) {
@@ -416,7 +419,13 @@ export function CellPicker({
   );
 }
 
-function GridCanvas({ items, onLayoutChange, onOpen, onClose, onRemove, onAdd, menuOpen }) {
+const ALIGN_OPTIONS = [
+  { id: 'left', label: 'Align left', Icon: AlignLeft },
+  { id: 'center', label: 'Align center', Icon: AlignCenter },
+  { id: 'right', label: 'Align right', Icon: AlignRight },
+];
+
+function GridCanvas({ items, onLayoutChange, onOpen, onClose, onAlign, onRemove, onAdd, menuOpen }) {
   const press = useRef(null);
   const onOpenRef = useRef(onOpen);
   const onCloseRef = useRef(onClose);
@@ -467,7 +476,7 @@ function GridCanvas({ items, onLayoutChange, onOpen, onClose, onRemove, onAdd, m
         containerPadding={[10, 10]}
         layout={layout}
         onLayoutChange={onLayoutChange}
-        draggableCancel=".lb-rgl-remove"
+        draggableCancel=".lb-rgl-remove, .lb-rgl-align"
         compactType="vertical"
       >
         {items.map((item) => (
@@ -475,7 +484,7 @@ function GridCanvas({ items, onLayoutChange, onOpen, onClose, onRemove, onAdd, m
             <button
               type="button"
               className={`lb-editor-cell${item.token ? ' has-token' : ' is-empty'}`}
-              style={{ justifyContent: 'center' }}
+              style={alignStyle(item)}
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 press.current = {
@@ -490,6 +499,20 @@ function GridCanvas({ items, onLayoutChange, onOpen, onClose, onRemove, onAdd, m
             >
               {gridPlaceholder(item.token)}
             </button>
+            <div className="lb-rgl-align" onPointerDown={(e) => e.stopPropagation()}>
+              {ALIGN_OPTIONS.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={item.align === id ? 'is-active' : ''}
+                  aria-label={label}
+                  aria-pressed={item.align === id}
+                  onClick={() => onAlign(item.id, id)}
+                >
+                  <Icon size={12} />
+                </button>
+              ))}
+            </div>
               <button
                 type="button"
                 className="lb-rgl-remove"
@@ -566,7 +589,7 @@ function PreviewValue({ item, onFormat }) {
     <div
       ref={elRef}
       className={`lb-cell${preview.unfilled ? ' is-unfilled' : ''}${canFormat ? ` is-interactive is-${kind}${open ? ' is-open' : ''}` : ''}`}
-      style={{ justifyContent: cellAlign(item) }}
+      style={alignStyle(item)}
       role={canFormat ? 'button' : undefined}
       tabIndex={canFormat ? 0 : undefined}
       onClick={canFormat ? () => setOpen(true) : undefined}
@@ -785,6 +808,10 @@ export default function LayoutEditor({
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, token } : item)));
   };
 
+  const setItemAlign = (id, align) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, align } : item)));
+  };
+
   const setItemFormat = (id, format) => {
     setItems((prev) => prev.map((item) => (
       item.id === id && item.token ? { ...item, token: { ...item.token, format } } : item
@@ -838,6 +865,7 @@ export default function LayoutEditor({
                 onLayoutChange={syncItems}
                 onOpen={(id, el) => setPicker({ id, el })}
                 onClose={() => setPicker(null)}
+                onAlign={setItemAlign}
                 onRemove={removeGridCell}
                 onAdd={addGridCell}
                 menuOpen={!!picker}

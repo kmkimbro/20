@@ -1,0 +1,274 @@
+.ap-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: rgba(17, 24, 39, 0.45);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+.ap-backdrop.is-open { opacity: 1; }
+
+.ap-backdrop .dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  background: #fff;
+  border: 2px solid #4c5fe0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.ap-backdrop.is-open .dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.ap-backdrop .plan-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid #edeef1;
+}
+
+.ap-backdrop .plan-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.ap-backdrop .draft-pill {
+  background: #f1f1f3;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.ap-backdrop .close-btn {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  font-size: 20px;
+  line-height: 1;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ap-backdrop .close-btn:hover { background: #f3f4f6; }
+.ap-backdrop .close-btn:focus-visible { outline: 2px solid #3f50db; outline-offset: 1px; }
+
+.ap-backdrop .plan-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.ap-backdrop .accept,
+.ap-backdrop .accept-secondary,
+.ap-backdrop .accept-quiet {
+  width: 100%;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.ap-backdrop .accept {
+  border: 0;
+  background: #3f50db;
+  color: #fff;
+}
+
+.ap-backdrop .accept-secondary {
+  border: 1px solid #3f50db;
+  background: #fff;
+  color: #3f50db;
+}
+
+.ap-backdrop .accept-secondary:hover { background: #f4f6ff; }
+
+.ap-backdrop .accept-quiet {
+  border: 1px solid #D1D5DB;
+  background: #fff;
+  color: #374151;
+}
+
+.ap-backdrop .accept-quiet:hover { background: #F9FAFB; }
+
+.ap-backdrop .accept:hover { background: #3443c2; }
+.ap-backdrop .accept:focus-visible { outline: 2px solid #4c5fe0; outline-offset: 2px; }
+
+.ap-backdrop .steps {
+  flex: 1;
+  min-height: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #d7d9de transparent;
+}
+
+.ap-backdrop .steps::-webkit-scrollbar { width: 8px; }
+.ap-backdrop .steps::-webkit-scrollbar-thumb { background: #d7d9de; border-radius: 99px; }
+
+.ap-backdrop .step {
+  border-bottom: 1px solid #edeef1;
+  padding: 8px 4px 10px;
+  border-radius: 8px;
+}
+
+.ap-backdrop .step.is-block-hover { background: #eef1ff; }
+.ap-backdrop .step.is-off .step-body { opacity: 0.4; }
+.ap-backdrop .step-body { transition: opacity 150ms ease; }
+
+.ap-backdrop .step-row,
+.ap-backdrop .node-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  position: relative;
+  padding-right: 56px;
+}
+
+.ap-backdrop .step-title,
+.ap-backdrop .node-name {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.ap-backdrop .step-title,
+.ap-backdrop .node-name.is-strong { font-weight: 700; color: #111827; }
+.ap-backdrop .node-name.is-part { font-weight: 400; color: #6b7280; }
+
+.ap-backdrop .suggested {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.ap-backdrop .check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1.5px solid #3f50db;
+  background: #3f50db;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+}
+
+.ap-backdrop .check[aria-checked="false"] { background: transparent; }
+.ap-backdrop .check[aria-checked="false"] svg { display: none; }
+.ap-backdrop .check:focus-visible { outline: 2px solid #3f50db; outline-offset: 2px; }
+
+.ap-backdrop .chevron,
+.ap-backdrop .slot {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ap-backdrop .chevron {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.ap-backdrop .chevron svg { transition: transform 150ms ease; }
+.ap-backdrop .chevron[aria-expanded="true"] svg { transform: rotate(90deg); }
+.ap-backdrop .chevron:focus-visible { outline: 2px solid #3f50db; }
+
+.ap-backdrop .glyph {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #3443c2;
+}
+
+.ap-backdrop .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.ap-backdrop .fold.leading,
+.ap-backdrop .fold.children {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.ap-backdrop .section-main { border-radius: 8px; }
+.ap-backdrop .hoverable.section-hover > .section-main { background: #eef1ff; }
+
+.ap-backdrop .row-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.ap-backdrop .hoverable.section-hover .row-actions,
+.ap-backdrop .row-actions:focus-within { opacity: 1; }
+
+.ap-backdrop .row-actions button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #3443c2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ap-backdrop .row-actions button:hover,
+.ap-backdrop .row-actions button:focus-visible { background: #e0e4ff; }

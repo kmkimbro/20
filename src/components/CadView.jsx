@@ -73,7 +73,7 @@ function getStepItems(op) {
   return Array.from({ length: 3 }, (_, i) => 'Blade');
 }
 
-export default function CadView({ operations = [], onAddStep, screenshotCaptureMode = false, isRetakeMode = false, initialSelectedOperationId = null, onCaptureComplete, onCancelCapture, onExitCaptureMode, docTitle = 'Test Document 1', onDocTitleChange, empty = false }) {
+export default function CadView({ operations = [], onAddStep, screenshotCaptureMode = false, isRetakeMode = false, initialSelectedOperationId = null, onCaptureComplete, onCancelCapture, onExitCaptureMode, docTitle = 'Test Document 1', onDocTitleChange, empty = false, onLoaded, emptyNote = '', revisionFocus = null, onOperationSelect, onAcknowledgeRevision }) {
   const viewerRef = useRef(null);
   const titleInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -107,7 +107,7 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
       if (progress >= 100) {
         progress = 100;
         clearInterval(tick);
-        setTimeout(() => { setCadLoading(false); setCadLoaded(true); }, 300);
+        setTimeout(() => { setCadLoading(false); setCadLoaded(true); onLoaded?.(); }, 300);
       }
       step = Math.min(CAD_STEPS.length - 1, Math.floor((progress / 100) * CAD_STEPS.length));
       setLoadProgress(Math.round(progress));
@@ -174,7 +174,15 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
   const selectOp = useCallback((id, e) => {
     if (e && e.target.closest('.cad-view-op-chevron')) return;
     setSelectedOperationId((prev) => (prev === id ? null : id));
-  }, []);
+    const op = operations.find((item) => item.id === id);
+    if (op) onOperationSelect?.(op);
+  }, [operations, onOperationSelect]);
+
+  useEffect(() => {
+    if (!revisionFocus) return;
+    const match = operations.find((op) => op.changeId === revisionFocus);
+    if (match) setSelectedOperationId(match.id);
+  }, [revisionFocus, operations]);
 
   const toggleOp = useCallback((id) => {
     setExpandedOps((prev) => {
@@ -422,10 +430,12 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                 const expanded = expandedOps.has(op.id);
                 const items = getStepItems(op);
                 const isSelected = selectedOperationId === op.id;
+                const flagged = Boolean(op.revision);
+                const dimmed = Boolean(revisionFocus) && op.changeId !== revisionFocus;
                 return (
                   <div
                     key={op.id}
-                    className={`cad-view-op-card${isSelected ? ' cad-view-op-card-selected' : ''}`}
+                    className={`cad-view-op-card${isSelected ? ' cad-view-op-card-selected' : ''}${flagged ? ` is-${op.revision}` : ''}${dimmed ? ' is-dim' : ''}`}
                     onClick={(e) => selectOp(op.id, e)}
                     role="button"
                     tabIndex={0}
@@ -443,6 +453,20 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                         <button type="button" className="cad-view-op-action" title="More" aria-label="More options"><MoreVertical size={14} /></button>
                       </div>
                     </div>
+                    {flagged ? (
+                      <div className="cad-view-op-flag-row">
+                        <span className={`cad-view-op-flag is-${op.revision}`}>{op.revisionLabel}</span>
+                        {onAcknowledgeRevision ? (
+                          <button
+                            type="button"
+                            className="cad-view-op-ack"
+                            onClick={(e) => { e.stopPropagation(); onAcknowledgeRevision(op); }}
+                          >
+                            Acknowledge
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {expanded && (
                       <ul className="cad-view-op-items" onClick={(e) => e.stopPropagation()}>
                         {items.map((name, i) => (
@@ -497,6 +521,9 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                     Drag & drop or click to upload<br />
                     <span style={{ fontSize: 12, color: '#9CA3AF' }}>.STEP, .IGES, .STL, .OBJ</span>
                   </span>
+                  {emptyNote ? (
+                    <span style={{ fontSize: 12, color: '#4F6EF7', textAlign: 'center', maxWidth: 320, lineHeight: 1.4 }}>{emptyNote}</span>
+                  ) : null}
                 </div>
                 <CadToolbar screenshotActive={false} onScreenshotClick={undefined} isRetakeMode={false} />
               </>

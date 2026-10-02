@@ -9,7 +9,7 @@ import {
   Cog, Table, Wrench, Grid3X3, Circle, Square, Triangle, Minus,
   ArrowUpRight, MoveRight, Redo, LayoutGrid, AlertTriangle,
   AlertCircle, Info, CheckCircle, TextCursorInput, MessageSquare,
-  Ruler, Tag, LayoutTemplate, Send,
+  Ruler, Tag, LayoutTemplate, Send, Eye, EyeOff,
 } from 'lucide-react';
 
 export default function Toolbar({
@@ -18,6 +18,8 @@ export default function Toolbar({
   onPlaceTextBox,
   onScreenshotCapture,
   readOnly = false,
+  annotationsVisible = true,
+  onToggleAnnotations,
 }) {
   const { conceptId } = usePrototype();
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -188,6 +190,18 @@ export default function Toolbar({
 
       {/* 8 — Annotations */}
       <SplitBtn menuId="annotation-menu" actions={annotationActions} caretTitle="Annotation options" />
+      {typeof onToggleAnnotations === 'function' ? (
+        <button
+          type="button"
+          className={`toolbar-btn${annotationsVisible ? ' toolbar-active' : ''}`}
+          title={annotationsVisible ? 'Hide annotations' : 'Show annotations'}
+          aria-pressed={annotationsVisible}
+          aria-label={annotationsVisible ? 'Hide annotations' : 'Show annotations'}
+          onClick={() => onToggleAnnotations(!annotationsVisible)}
+        >
+          {annotationsVisible ? <Eye className="toolbar-icon" size={18} /> : <EyeOff className="toolbar-icon" size={18} />}
+        </button>
+      ) : null}
 
       {/* 9 — Templates */}
       <button

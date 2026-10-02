@@ -34,6 +34,10 @@ export default function PrototypeSwitcher() {
   }, []);
 
   const handleSelect = (path) => {
+    if (path.endsWith('.html')) {
+      window.location.assign(path);
+      return;
+    }
     navigate(path);
     setOpen(false);
   };

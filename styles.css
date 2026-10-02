@@ -706,6 +706,70 @@ button {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.cad-view-op-flag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 8px 36px;
+}
+
+.cad-view-op-ack {
+  margin-left: auto;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  color: #111827;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cad-view-op-ack:hover {
+  background: #F3F4F6;
+}
+
+.cad-view-op-flag {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.cad-view-op-flag.is-added {
+  background: #D7F5D8;
+  color: #1B7A34;
+}
+
+.cad-view-op-flag.is-removed {
+  background: #F6D4D4;
+  color: #C24545;
+}
+
+.cad-view-op-flag.is-modified {
+  background: #F8E7A8;
+  color: #8A6D12;
+}
+
+.cad-view-op-card.is-removed {
+  border-color: #E7B4B4;
+}
+
+.cad-view-op-card.is-modified {
+  border-color: #E6D48A;
+}
+
+.cad-view-op-card.is-added {
+  border-color: #B7E0BC;
+}
+
+.cad-view-op-card.is-dim {
+  opacity: 0.38;
+}
+
 .cad-view-op-name-selected {
   background: var(--blue-primary);
   color: var(--white);

@@ -108,6 +108,11 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/assembly-map" element={<AssemblyMap />} />
               <Route path="/prototype/layout-builder" element={<LayoutBuilder />} />
               <Route path="/prototype/layout-builder-2" element={<LayoutBuilder storageKey="layout_builder_v2" gridEditor />} />
+              <Route path="/prototype/magic-parser" element={<LayoutBuilder storageKey="magic_parser_v1" magicParser />} />
+              <Route path="/prototype/review-cad-change" element={<LayoutBuilder storageKey="q20_ai_cad_change_v1" magicParser interaction="cad-change" />} />
+              <Route path="/prototype/ghost-steps" element={<LayoutBuilder storageKey="q20_ai_ghost_steps_v1" magicParser interaction="ghost-steps" />} />
+              <Route path="/prototype/tag-onto-step" element={<LayoutBuilder storageKey="q20_ai_tag_step_v1" magicParser interaction="tag-step" />} />
+              <Route path="/prototype/assembly-plan" element={<LayoutBuilder storageKey="q20_assembly_plan_v1" magicParser assemblyPlan />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route
                 path="/prototype/tool-library-mid-fi"

@@ -35,25 +35,28 @@ export default function PrototypeGallery() {
         ← Back to app (production)
       </Link>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {PROTOTYPES.map((p) => (
-          <li key={p.id} style={{ marginBottom: 16 }}>
-            <Link
-              to={p.path}
-              style={{
-                display: 'block',
-                padding: 16,
-                border: '1px solid #e0e0e0',
-                borderRadius: 8,
-                textDecoration: 'none',
-                color: 'inherit',
-                background: '#fff',
-              }}
-            >
+        {PROTOTYPES.map((p) => {
+          const cardStyle = {
+            display: 'block',
+            padding: 16,
+            border: '1px solid #e0e0e0',
+            borderRadius: 8,
+            textDecoration: 'none',
+            color: 'inherit',
+            background: '#fff',
+          };
+          const body = (
+            <>
               <strong style={{ fontSize: 16 }}>{p.title}</strong>
               <p style={{ margin: '8px 0 0', fontSize: 14, color: '#666' }}>{p.description}</p>
-            </Link>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={p.id} style={{ marginBottom: 16 }}>
+              {p.file ? <a href={p.path} style={cardStyle}>{body}</a> : <Link to={p.path} style={cardStyle}>{body}</Link>}
+            </li>
+          );
+        })}
       </ul>
       <PrototypeSwitcher />
     </div>

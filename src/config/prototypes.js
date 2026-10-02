@@ -133,6 +133,41 @@ export const PROTOTYPES = [
     path: '/prototype/layout-builder-2',
   },
   {
+    id: 'magic-parser',
+    title: 'Magic Parser - basic',
+    description:
+      'Upload a finished PDF and turn it into a Quarter20 document. Pages are parsed into images and text you can move. Uses its own saved state.',
+    path: '/prototype/magic-parser',
+  },
+  {
+    id: 'review-cad-change',
+    title: 'Review a CAD change as objects on the page',
+    description:
+      'A CAD revision on the document card, and a before/after compare inside the work instruction for anyone reading it. Own saved state, forked from Magic Parser.',
+    path: '/prototype/review-cad-change',
+  },
+  {
+    id: 'ghost-steps',
+    title: 'Generated steps arrive as ghosts you keep or flick away',
+    description:
+      'Assembly order arrives as suggested steps. Keep one, edit it in place, or drag it off the page. Pinned CAD values stay put until you unpin them. Own saved state, forked from Magic Parser.',
+    path: '/prototype/ghost-steps',
+  },
+  {
+    id: 'tag-onto-step',
+    title: 'Tag a part, tool, or procedure onto a step and let the step fill in',
+    description:
+      'Drag a toolkit item onto a step and the sentence is written from that tag. Drop one on the live screenshot to bind a callout. Own saved state, forked from Magic Parser.',
+    path: '/prototype/tag-onto-step',
+  },
+  {
+    id: 'assembly-plan',
+    title: 'Assembly plan',
+    description:
+      'Create a document. A generated assembly plan opens, and accepting it places the CAD operations and screenshots.',
+    path: '/prototype/assembly-plan',
+  },
+  {
     id: 'megadocument-empty',
     title: 'Megadocument — empty state',
     description:

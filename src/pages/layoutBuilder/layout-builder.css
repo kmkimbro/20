@@ -721,6 +721,37 @@
   color: #111827;
 }
 
+.lb-rgl-align {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  display: none;
+  gap: 2px;
+  z-index: 3;
+}
+
+.lb-rgl .react-grid-item:hover .lb-rgl-align {
+  display: flex;
+}
+
+.lb-rgl-align button {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: #fff;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lb-rgl-align button:hover,
+.lb-rgl-align button.is-active {
+  background: #F3F4F6;
+  color: #111827;
+}
+
 .lb-add-cell {
   display: inline-flex;
   align-items: center;
@@ -1500,6 +1531,41 @@
 .lb-logo-opt img {
   max-width: 100%;
   max-height: 28px;
+}
+
+.lb-cad-host {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-cad-host .cad-view {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.lb-plan-figure {
+  margin-top: 8px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #F8FAFC;
+  overflow: hidden;
+}
+
+.lb-plan-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lb-plan-caption {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #6B7280;
+  border-top: 1px solid #E5E7EB;
+  background: #fff;
 }
 
 .lb-cad-placeholder {
