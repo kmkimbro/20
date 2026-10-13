@@ -1,0 +1,106 @@
+.inf-dialog { width: min(560px, calc(100vw - 32px)); }
+.inf-dialog .mp-field { margin-top: 16px; }
+.inf-dialog .mp-btn-create:disabled { opacity: 0.45; cursor: default; }
+
+.inf-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  border: 1px dashed #C7D2FE;
+  border-radius: 10px;
+  background: #F8F9FF;
+  color: #374151;
+}
+
+.inf-drop.is-hot { border-color: #3f50db; background: #EEF2FF; }
+
+.inf-drop strong { color: #111827; }
+
+.inf-drop span { font-size: 13px; color: #6B7280; }
+
+.inf-drop label {
+  margin-top: 6px;
+  color: #3f50db;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.inf-drop input { display: none; }
+
+.inf-prompt {
+  min-height: 88px;
+  resize: vertical;
+  font: inherit;
+}
+
+.inf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.inf-chip {
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.inf-chip.is-on { border-color: #3f50db; background: #EEF2FF; color: #2430a8; }
+
+.inf-reading p { font-weight: 650; color: #111827; }
+.inf-reading ol { margin: 12px 0 0; padding-left: 18px; color: #9CA3AF; }
+.inf-reading li { margin: 6px 0; }
+.inf-reading li.is-now { color: #111827; font-weight: 650; }
+.inf-reading li.is-done { color: #1B7A34; }
+
+.inf-action { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+.inf-tools { margin: 0 0 8px; font-size: 13px; color: #4B5563; }
+
+.inf-ctq {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #F8E7A8;
+  color: #8A6D12;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inf-figure {
+  margin-top: 8px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.inf-figure svg { display: block; width: 100%; height: auto; }
+
+.cad-view-model-figure {
+  position: absolute;
+  inset: 24px 24px 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cad-view-model-figure svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.inf-caption { padding: 8px 12px; font-size: 12px; color: #6B7280; border-top: 1px solid #E5E7EB; }
+
+.inf-kit { margin: 0; padding-left: 18px; }
+.inf-kit li { margin: 4px 0; }
+
+.inf-source-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.inf-source-table th,
+.inf-source-table td { border: 1px solid #E5E7EB; padding: 8px; vertical-align: top; text-align: left; }
+.inf-source-table th { background: #F9FAFB; font-size: 12px; }
+.inf-source-table svg { width: 140px; }

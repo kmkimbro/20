@@ -7,6 +7,7 @@ import {
   ChevronDown,
   EllipsisVertical,
   CircleHelp,
+  Sparkles,
 } from 'lucide-react';
 
 const DOC_LIFECYCLE_OPTIONS = ['Draft', 'In review', 'Approved', 'Technician mode'];
@@ -18,6 +19,8 @@ export default function Header({
   documentLifecycle = null,
   onDocumentLifecycleChange,
   publishStatusLabel = 'Unpublished',
+  onPrompts = null,
+  promptsActive = false,
   backTo = null,
   hideCadNav = false,
   onBack = null,
@@ -85,6 +88,17 @@ export default function Header({
             </select>
           </div>
         )}
+        {!minimal && onPrompts ? (
+          <button
+            type="button"
+            className={`icon-btn prompts-btn${promptsActive ? ' is-active' : ''}`}
+            aria-label="Ask"
+            aria-pressed={promptsActive}
+            onClick={onPrompts}
+          >
+            <Sparkles size={18} />
+          </button>
+        ) : null}
         {!minimal && (
           <button type="button" className={`publish-btn${publishOpen ? ' publish-open' : ''}`} onClick={() => setPublishOpen((p) => !p)}>
             {publishStatusLabel || 'Unpublished'} <ChevronDown className="publish-caret" size={16} />

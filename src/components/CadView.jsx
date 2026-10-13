@@ -52,20 +52,6 @@ const ASSEMBLY_TREE = [
   { id: 'at7', label: 'Assembly/Partname', children: null },
 ];
 
-/** Collect all selectable part IDs (parent nodes + children) */
-function getAllPartIds(tree) {
-  const ids = [];
-  tree.forEach((node) => {
-    ids.push(node.id);
-    if (node.children?.length) {
-      node.children.forEach((_, i) => ids.push(`${node.id}-${i}`));
-    }
-  });
-  return ids;
-}
-
-const ALL_PART_IDS = getAllPartIds(ASSEMBLY_TREE);
-
 /** Get display items for an operation (parts or default "Blade" entries for empty). */
 function getStepItems(op) {
   const parts = op.parts || [];
@@ -73,7 +59,7 @@ function getStepItems(op) {
   return Array.from({ length: 3 }, (_, i) => 'Blade');
 }
 
-export default function CadView({ operations = [], onAddStep, screenshotCaptureMode = false, isRetakeMode = false, initialSelectedOperationId = null, onCaptureComplete, onCancelCapture, onExitCaptureMode, docTitle = 'Test Document 1', onDocTitleChange, empty = false, onLoaded, emptyNote = '', revisionFocus = null, onOperationSelect, onAcknowledgeRevision }) {
+export default function CadView({ operations = [], onAddStep, screenshotCaptureMode = false, isRetakeMode = false, initialSelectedOperationId = null, onCaptureComplete, onCancelCapture, onExitCaptureMode, docTitle = 'Test Document 1', onDocTitleChange, empty = false, onLoaded, emptyNote = '', revisionFocus = null, onOperationSelect, onAcknowledgeRevision, assemblyTree = null, subtitle = 'Template type', viewer = null, onScopePick = null, scopeId = null }) {
   const viewerRef = useRef(null);
   const titleInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -114,7 +100,18 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
       setLoadStep(step);
     }, 300);
   };
-  const [expandedAssemblyNodes, setExpandedAssemblyNodes] = useState(() => new Set(['at4']));
+  const tree = assemblyTree?.length ? assemblyTree : ASSEMBLY_TREE;
+  const partIds = tree.flatMap((node) => [
+    node.id,
+    ...(node.children || []).map((_, index) => `${node.id}-${index}`),
+  ]);
+  const [expandedAssemblyNodes, setExpandedAssemblyNodes] = useState(() => {
+    if (assemblyTree?.length) {
+      const first = assemblyTree.find((node) => node.children?.length);
+      return new Set(first ? [first.id] : []);
+    }
+    return new Set(['at4']);
+  });
   const [selectedPartIds, setSelectedPartIds] = useState(() => new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -175,8 +172,11 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
     if (e && e.target.closest('.cad-view-op-chevron')) return;
     setSelectedOperationId((prev) => (prev === id ? null : id));
     const op = operations.find((item) => item.id === id);
-    if (op) onOperationSelect?.(op);
-  }, [operations, onOperationSelect]);
+    if (op) {
+      onOperationSelect?.(op);
+      onScopePick?.({ id: op.id, label: op.label });
+    }
+  }, [operations, onOperationSelect, onScopePick]);
 
   useEffect(() => {
     if (!revisionFocus) return;
@@ -215,14 +215,14 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
   const toggleSelectAll = useCallback((e) => {
     if (e) e.stopPropagation();
     setSelectedPartIds((prev) => {
-      if (prev.size >= ALL_PART_IDS.length) return new Set();
-      return new Set(ALL_PART_IDS);
+      if (prev.size >= partIds.length) return new Set();
+      return new Set(partIds);
     });
-  }, []);
+  }, [partIds]);
 
   const partsSelectedCount = selectedPartIds.size;
-  const allSelected = ALL_PART_IDS.length > 0 && selectedPartIds.size >= ALL_PART_IDS.length;
-  const someSelected = selectedPartIds.size > 0 && selectedPartIds.size < ALL_PART_IDS.length;
+  const allSelected = partIds.length > 0 && selectedPartIds.size >= partIds.length;
+  const someSelected = selectedPartIds.size > 0 && selectedPartIds.size < partIds.length;
 
   const handleCapture = useCallback(() => {
     const dataUrl = captureCadViewAsImage(viewerRef);
@@ -265,7 +265,7 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                 {titleValue}
               </h2>
             )}
-            <p className="cad-view-tree-subtitle">Template type</p>
+            <p className="cad-view-tree-subtitle">{subtitle}</p>
           </div>
           <button type="button" className="cad-view-tree-back-btn" aria-label="Back">
             <ChevronLeft size={18} />
@@ -321,14 +321,18 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
         </div>
         <section className="cad-view-tree-section">
           <ul className="cad-view-tree-list">
-            {ASSEMBLY_TREE.map((node) => {
+            {tree.map((node) => {
               const hasChildren = node.children && node.children.length > 0;
               const expanded = expandedAssemblyNodes.has(node.id);
               return (
                 <li key={node.id} className="cad-view-tree-node">
                   <div
-                    className="cad-view-tree-row"
-                    onClick={(e) => !e.target.closest('.cad-view-tree-chevron-btn') && togglePartSelection(node.id, e)}
+                    className={`cad-view-tree-row${scopeId === node.id ? ' is-scope' : ''}`}
+                    onClick={(e) => {
+                      if (e.target.closest('.cad-view-tree-chevron-btn')) return;
+                      togglePartSelection(node.id, e);
+                      onScopePick?.({ id: node.id, label: node.label });
+                    }}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && togglePartSelection(node.id, e)}
@@ -361,8 +365,11 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                         return (
                           <li key={childId} className="cad-view-tree-child">
                             <div
-                              className="cad-view-tree-child-row"
-                              onClick={(e) => togglePartSelection(childId, e)}
+                              className={`cad-view-tree-child-row${scopeId === childId ? ' is-scope' : ''}`}
+                              onClick={(e) => {
+                                togglePartSelection(childId, e);
+                                onScopePick?.({ id: childId, label: childLabel });
+                              }}
                               role="button"
                               tabIndex={0}
                               onKeyDown={(e) => e.key === 'Enter' && togglePartSelection(childId, e)}
@@ -435,7 +442,7 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                 return (
                   <div
                     key={op.id}
-                    className={`cad-view-op-card${isSelected ? ' cad-view-op-card-selected' : ''}${flagged ? ` is-${op.revision}` : ''}${dimmed ? ' is-dim' : ''}`}
+                    className={`cad-view-op-card${isSelected ? ' cad-view-op-card-selected' : ''}${flagged ? ` is-${op.revision}` : ''}${dimmed ? ' is-dim' : ''}${scopeId === op.id ? ' is-scope' : ''}`}
                     onClick={(e) => selectOp(op.id, e)}
                     role="button"
                     tabIndex={0}
@@ -470,7 +477,11 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
                     {expanded && (
                       <ul className="cad-view-op-items" onClick={(e) => e.stopPropagation()}>
                         {items.map((name, i) => (
-                          <li key={`${op.id}-${i}`} className="cad-view-op-item">
+                          <li
+                            key={`${op.id}-${i}`}
+                            className={`cad-view-op-item${scopeId === `${op.id}-part-${i}` ? ' is-scope' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); onScopePick?.({ id: `${op.id}-part-${i}`, label: name }); }}
+                          >
                             <span className="cad-view-op-item-label">{name}</span>
                             <button type="button" className="cad-view-op-item-eye" aria-label="Toggle visibility"><Eye size={14} /></button>
                           </li>
@@ -586,10 +597,14 @@ export default function CadView({ operations = [], onAddStep, screenshotCaptureM
               </>
             ) : (
               <>
-                <div className="cad-view-model-placeholder">
-                  <Box className="cad-view-model-icon" size={64} strokeWidth={1.2} />
-                  <span className="cad-view-model-label">CAD model</span>
-                </div>
+                {viewer ? (
+                  <div className="cad-view-model-figure">{viewer}</div>
+                ) : (
+                  <div className="cad-view-model-placeholder">
+                    <Box className="cad-view-model-icon" size={64} strokeWidth={1.2} />
+                    <span className="cad-view-model-label">CAD model</span>
+                  </div>
+                )}
                 <div className="cad-view-view-cube">TOP</div>
                 <CadToolbar
                   screenshotActive={!!selectedOperationId}

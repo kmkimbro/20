@@ -166,6 +166,11 @@ button {
   transition: background 0.15s ease;
 }
 
+.prompts-btn.is-active {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   color: var(--white);
@@ -1093,10 +1098,9 @@ button {
 
 .cad-view-toolbar-svg {
   display: block;
-  max-width: min(90vw, 758px);
-  height: auto;
-  max-height: 88px;
-  object-fit: contain;
+  width: 360px;
+  height: 52px;
+  max-width: 78%;
 }
 
 

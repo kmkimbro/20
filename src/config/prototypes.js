@@ -161,6 +161,13 @@ export const PROTOTYPES = [
     path: '/prototype/tag-onto-step',
   },
   {
+    id: 'infer-document',
+    title: 'Read an existing document into Quarter20',
+    description:
+      'New document upload. A CAD file is enough, uploaded or linked from the library. A PDF of an existing document also needs that model. The description is an optional prompt.',
+    path: '/prototype/infer-document',
+  },
+  {
     id: 'assembly-plan',
     title: 'Assembly plan',
     description:

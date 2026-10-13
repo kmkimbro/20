@@ -18,6 +18,8 @@ import { parsePdfFile } from './magicParser/parsePdf.js';
 import { saveParsedPages } from './magicParser/docStore.js';
 import InteractionDocument, { INTERACTION_COPY } from './magicParser/interactions/InteractionDocument.jsx';
 import AssemblyPlanModal from './magicParser/AssemblyPlanModal.jsx';
+import InferredDocument from './infer/InferredDocument.jsx';
+import { planFromSample, sampleForFile } from './infer/samples.js';
 import './layoutBuilder/layout-builder.css';
 import './magicParser/magic-parser.css';
 import './magicParser/interactions/interaction.css';
@@ -76,9 +78,14 @@ export default function LayoutBuilder({
   magicParser = false,
   interaction = null,
   assemblyPlan = false,
+  inferDocument = false,
 } = {}) {
   const [state, setState] = useState(() => {
     const loaded = loadState(storageKey);
+    if (inferDocument) {
+      const onlySeed = loaded.documents.every((doc) => doc.id === 'doc-1' || doc.id === 'doc-2');
+      if (onlySeed) return { ...loaded, documents: [], docState: {} };
+    }
     if (!interaction) return loaded;
     if (loaded.documents.some((doc) => doc.kind === 'interaction')) return loaded;
     const projectId = loaded.projects[0]?.id || 'proj-1';
@@ -105,7 +112,7 @@ export default function LayoutBuilder({
   const [selectedProjectId, setSelectedProjectId] = useState('proj-1');
   const [galleryMode, setGalleryMode] = useState('grid');
   const [editor, setEditor] = useState(null);
-  const [panelOpen, setPanelOpen] = useState(!magicParser);
+  const [panelOpen, setPanelOpen] = useState(!magicParser && !inferDocument);
   const [placeholderHistory, setPlaceholderHistory] = useState({});
   const [importer, setImporter] = useState(null);
   const [planDocId, setPlanDocId] = useState(null);
@@ -120,7 +127,7 @@ export default function LayoutBuilder({
     const doc = docOverride || state.documents.find((item) => item.id === id);
     setActiveDocId(id);
     setView('document');
-    setPanelOpen(!magicParser);
+    setPanelOpen(!magicParser && !inferDocument);
     setPlanDocId(assemblyPlan && doc?.cadLinked && !doc?.planAccepted ? id : null);
   };
 
@@ -291,19 +298,53 @@ export default function LayoutBuilder({
 
   const addDocument = (projectId, draft) => {
     const cadName = (draft?.cadName || '').trim() || (assemblyPlan ? 'weldment_frame.step' : '');
+    const inferred = inferDocument
+      ? planFromSample(sampleForFile(cadName || draft?.name, 'drawing'), { pictures: true, table: true })
+      : null;
     const doc = {
       id: uid('doc'),
       name: (draft?.name || '').trim() || 'Untitled Document',
       projectId,
       created: createdLabel(),
-      cadFileLabel: cadName,
-      cadLinked: Boolean(cadName),
+      cadFileLabel: cadName || (inferred ? `${(draft?.name || 'Model').trim() || 'Model'}.step` : ''),
+      cadLinked: Boolean(cadName) || Boolean(inferred),
       templateId: draft?.templateId || 'work_instruction',
       kind: interaction ? 'interaction' : undefined,
+      planAccepted: Boolean(inferred),
+      planScope: inferred ? 'document' : undefined,
+      planSteps: inferred?.planSteps,
     };
     update((prev) => ({
       ...prev,
       cadLibrary: rememberCad(prev.cadLibrary, cadName, draft?.cadSource === 'upload'),
+      documents: [...prev.documents, doc],
+      docState: {
+        ...prev.docState,
+        [doc.id]: { headerId: null, footerId: null, values: { date_format: 'us', page_format: 'pageN' } },
+      },
+    }));
+    showCreatedDoc(projectId, doc);
+  };
+
+  const readDocument = (draft) => {
+    const projectId = importer?.projectId || selectedProjectId;
+    const { planSteps } = planFromSample(draft.sampleId, draft.adjustments);
+    const doc = {
+      id: uid('doc'),
+      name: draft.title || 'Untitled Document',
+      projectId,
+      created: createdLabel(),
+      cadFileLabel: draft.cadName,
+      cadLinked: true,
+      sourceName: draft.origin === 'both' ? draft.sourceName : '',
+      templateId: 'work_instruction',
+      planAccepted: true,
+      planScope: 'document',
+      planSteps,
+    };
+    update((prev) => ({
+      ...prev,
+      cadLibrary: rememberCad(prev.cadLibrary, draft.cadName, true),
       documents: [...prev.documents, doc],
       docState: {
         ...prev.docState,
@@ -351,6 +392,18 @@ export default function LayoutBuilder({
     );
   }
 
+  if (view === 'document' && activeDoc?.kind === 'inferred') {
+    return (
+      <>
+        <InferredDocument
+          document={activeDoc}
+          onBack={() => { setView('home'); setActiveDocId(null); }}
+        />
+        <PrototypeSwitcher />
+      </>
+    );
+  }
+
   if (view === 'document' && activeDoc?.kind === 'parsed') {
     return (
       <>
@@ -385,8 +438,9 @@ export default function LayoutBuilder({
           onApplyTemplate={applyTemplate}
           onNewLayout={(type) => setEditor({ type, layout: null })}
           onTogglePanel={() => setPanelOpen((v) => !v)}
-          planSteps={activeDoc.planSteps || null}
-          planScope={activeDoc.planScope || null}
+          showPrompts={inferDocument}
+          planSteps={inferDocument ? planFromSample().planSteps : (activeDoc.planSteps || null)}
+          planScope={activeDoc.planScope || (inferDocument ? 'document' : null)}
           awaitingPlan={assemblyPlan && activeDoc.cadLinked && !activeDoc.planAccepted}
         />
         {planModal}
@@ -511,7 +565,7 @@ export default function LayoutBuilder({
                 {interaction && interaction !== 'cad-change' ? (
                   <p className="ai-home-note">{INTERACTION_COPY[interaction]?.home}</p>
                 ) : null}
-                {magicParser ? (
+                {magicParser || inferDocument ? (
                   <button type="button" className="lb-btn-primary" onClick={() => openCreator(selectedProjectId)}>
                     <Plus size={14} /> New document
                   </button>
@@ -530,6 +584,7 @@ export default function LayoutBuilder({
                         <div className="lb-doc-tile-sub">
                         {d.kind === 'parsed' ? 'Imported PDF · ' : ''}
                         {d.kind === 'interaction' ? 'Work instruction · ' : ''}
+                        {d.kind === 'inferred' ? 'Inferred · ' : ''}
                         {assemblyPlan && d.cadLinked ? 'CAD read · ' : ''}
                         {state.projects.find((p) => p.id === d.projectId)?.name}
                         </div>
@@ -628,7 +683,7 @@ export default function LayoutBuilder({
                     <button
                       type="button"
                       className="lb-btn-primary"
-                      onClick={() => (magicParser ? openCreator(selectedProjectId) : addDocument(selectedProjectId))}
+                      onClick={() => (magicParser || inferDocument ? openCreator(selectedProjectId) : addDocument(selectedProjectId))}
                     >
                       <Plus size={14} /> New document
                     </button>
@@ -646,6 +701,7 @@ export default function LayoutBuilder({
                           <div className="lb-doc-tile-sub">
                             {d.kind === 'parsed' ? 'Imported PDF · ' : ''}
                             {d.kind === 'interaction' ? 'Work instruction · ' : ''}
+                            {d.kind === 'inferred' ? 'Inferred · ' : ''}
                             {assemblyPlan && d.cadLinked ? 'CAD read · ' : ''}
                             Created {d.created}
                           </div>
@@ -698,13 +754,14 @@ export default function LayoutBuilder({
           onClose={() => setEditor(null)}
         />
       )}
-      {magicParser ? (
+      {magicParser || inferDocument ? (
         <CreateDocumentDialog
           creator={importer}
           cadLibrary={state.cadLibrary || []}
           onClose={() => { if (importer?.phase !== 'working') setImporter(null); }}
           onCreateBlank={(draft) => addDocument(importer?.projectId, draft)}
           onCreateFromPdf={importPdf}
+          onCreateInfer={inferDocument ? readDocument : undefined}
         />
       ) : null}
       <PrototypeSwitcher />

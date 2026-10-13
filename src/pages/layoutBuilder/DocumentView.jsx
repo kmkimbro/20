@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header.jsx';
 import CadView from '../../components/CadView.jsx';
+import ModelStage from '../infer/ModelStage.jsx';
+import PromptPanel from '../infer/PromptPanel.jsx';
 import {
   C, CURRENT_USER, DATE_FORMATS, PAGE_FORMATS, DOC_PAGES, PRINT_PAGES, DOC_TEMPLATES,
   REF_DATE, formatDate, resolveToken, cellCount, GRID_COLS, gridRowCount, blockJustify,
@@ -662,11 +664,18 @@ export default function DocumentView({
   onApplyTemplate,
   onNewLayout,
   onTogglePanel,
+  showPrompts = false,
   planSteps = null,
   planScope = null,
   awaitingPlan = false,
 }) {
   const [nav, setNav] = useState('doc');
+  const [promptsOpen, setPromptsOpen] = useState(false);
+  const [promptTarget, setPromptTarget] = useState(null);
+  const [askHistory, setAskHistory] = useState([]);
+  const [outline, setOutline] = useState('steps');
+  const [pendingStep, setPendingStep] = useState(null);
+  const [cadOpId, setCadOpId] = useState(null);
   const [activePage, setActivePage] = useState('op2');
   const [panelTab, setPanelTab] = useState('layouts');
   const hasOps = Array.isArray(planSteps) && planSteps.length > 0;
@@ -676,7 +685,7 @@ export default function DocumentView({
     ? planSteps.map((step) => ({
       id: `plan-${step.step}`,
       label: `Step ${step.step} — ${step.title}`,
-      parts: (step.parts || []).map((name) => ({ name })),
+      parts: (step.parts || []).map((part) => ({ name: typeof part === 'string' ? part : part.name })),
     }))
     : [];
 
@@ -693,6 +702,16 @@ export default function DocumentView({
     if (planScope === 'operations' || planScope === 'document') setNav('cad');
   }, [planScope]);
 
+  useEffect(() => {
+    if (outline !== 'steps' || !pendingStep) return;
+    document.getElementById(`plan-step-${pendingStep}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setPendingStep(null);
+  }, [outline, pendingStep]);
+
+  const source = showPrompts && generated
+    ? (doc.sourceName || `${(doc.name || 'Work instruction').replace(/\.pdf$/i, '')}.pdf`)
+    : '';
+
   const visibleSheets = activePage === 'op2' || activePage === 'op2-sub'
     ? PRINT_PAGES
     : [{ id: activePage, title: DOC_PAGES.find((p) => p.id === activePage)?.title || 'Page', pageIndex: 1 }];
@@ -703,12 +722,32 @@ export default function DocumentView({
         navActive={nav}
         onNavChange={setNav}
         onBack={onBack}
+        onPrompts={showPrompts ? () => setPromptsOpen((open) => !open) : null}
+        promptsActive={promptsOpen}
       />
       {nav === 'cad' ? (
-        hasOps ? (
-          <div className="lb-cad-host">
-            <CadView operations={cadOps} docTitle={doc.name} />
-          </div>
+        <div className="lb-cad-host">
+        {hasOps ? (
+            <CadView
+              operations={cadOps}
+              docTitle={(doc.cadFileLabel || doc.name || 'Model').replace(/\.(step|stp|iges|igs|stl|obj)$/i, '')}
+              subtitle={doc.cadFileLabel || 'CAD model'}
+              assemblyTree={[{
+                id: 'model',
+                label: (doc.cadFileLabel || doc.name || 'Model').replace(/\.(step|stp|iges|igs|stl|obj)$/i, ''),
+                children: [...new Set(planSteps.flatMap((step) => (step.parts || []).map((part) => (typeof part === 'string' ? part : part.name))))],
+              }]}
+              onOperationSelect={(operation) => setCadOpId(operation.id)}
+              onScopePick={showPrompts && promptsOpen ? setPromptTarget : null}
+              scopeId={promptTarget?.id || null}
+              viewer={(
+                <ModelStage
+                  title={(doc.cadFileLabel || doc.name || 'Model').replace(/\.(step|stp|iges|igs|stl|obj)$/i, '')}
+                  parts={[...new Set(planSteps.flatMap((step) => (step.parts || []).map((part) => (typeof part === 'string' ? part : part.name))))]}
+                  active={(cadOps.find((operation) => operation.id === cadOpId) || cadOps[0])?.parts.map((part) => part.name) || []}
+                />
+              )}
+            />
         ) : (
         <div className="lb-cad-placeholder">
           <div style={{ textAlign: 'center' }}>
@@ -717,24 +756,50 @@ export default function DocumentView({
             <button type="button" className="lb-btn-ghost" onClick={() => setNav('doc')}>Back to document</button>
           </div>
         </div>
-        )
+        )}
+          {promptsOpen ? (
+            <PromptPanel
+              target={promptTarget}
+              onClearTarget={() => setPromptTarget(null)}
+              history={askHistory}
+              onSend={(entry) => setAskHistory((items) => [...items, entry])}
+              original={source ? { fileName: source, steps: planSteps } : null}
+              onClose={() => setPromptsOpen(false)}
+            />
+          ) : null}
+        </div>
       ) : (
         <div className="lb-doc">
           <aside className="lb-doc-tree">
             <div className="lb-tree-title">{doc.name}</div>
-            {generated ? planSteps.map((step) => (
+            {generated ? (
+              <>
+                {source ? (
+                  <button
+                    type="button"
+                    className={`lb-tree-item${outline === 'history' ? ' is-active' : ''}`}
+                    onClick={() => setOutline('history')}
+                  >
+                    <History size={14} />
+                    Document Version History
+                  </button>
+                ) : null}
+                {planSteps.map((step) => (
               <button
                 key={step.step}
                 type="button"
-                className="lb-tree-item"
+                className={`lb-tree-item${outline === 'steps' ? '' : ''}`}
                 onClick={() => {
-                  document.getElementById(`plan-step-${step.step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  setOutline('steps');
+                  setPendingStep(step.step);
                 }}
               >
                 <FileText size={14} />
                 {`Step ${step.step}`}
               </button>
-            )) : planScope === 'operations' ? (
+                ))}
+              </>
+            ) : planScope === 'operations' ? (
               <button type="button" className="lb-tree-item is-active">
                 <FileText size={14} />
                 Document
@@ -768,22 +833,108 @@ export default function DocumentView({
             })}
           </aside>
           <div className="lb-doc-stage">
-            <LayoutDocToolbar panelOpen={panelOpen} onTogglePanel={onTogglePanel} />
+            <LayoutDocToolbar
+              panelOpen={panelOpen && !promptsOpen}
+              onTogglePanel={() => {
+                setPromptsOpen(false);
+                onTogglePanel();
+              }}
+            />
             <div className="lb-doc-canvas">
-              {generated ? planSteps.map((step, index) => (
-                <article key={step.step} id={`plan-step-${step.step}`} className="lb-sheet">
+              {outline === 'history' && source ? (
+                <article className="lb-sheet">
                   <div className="lb-sheet-head">
-                    <h2>{`Step ${step.step} — ${step.title}`}</h2>
-                    <span>CAD screenshot</span>
+                    <h2>Document Version History</h2>
                   </div>
                   <div className="lb-sheet-body">
-                    <div className="lb-plan-figure">
-                      <PlanShot index={index} />
-                      <div className="lb-plan-caption">{step.title}</div>
-                    </div>
+                    <p className="lb-history-file">{source}</p>
+                    {planSteps.map((step) => (
+                      <article key={step.step} className="lb-original-page">
+                        <div className="lb-original-page-no">{`Page ${step.step + 1}`}</div>
+                        <h3>{`${step.step}. ${step.title}`}</h3>
+                        {step.note ? <p>{step.note}</p> : null}
+                        <div className="lb-original-figure"><PlanShot index={step.step - 1} /></div>
+                        {step.parts?.length ? (
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Item</th>
+                                <th>Part</th>
+                                <th>Name</th>
+                                <th>Qty</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {step.parts.map((part) => {
+                                const name = typeof part === 'string' ? part : part.name;
+                                return (
+                                  <tr key={`${step.step}-${part.pn || name}`}>
+                                    <td>{part.item || ''}</td>
+                                    <td>{part.pn || ''}</td>
+                                    <td>{name}</td>
+                                    <td>{part.qty || ''}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        ) : null}
+                      </article>
+                    ))}
                   </div>
                 </article>
-              )) : planScope === 'operations' ? (
+              ) : generated ? planSteps.map((step, index) => {
+                const pick = (id, label) => (event) => {
+                  event.stopPropagation();
+                  if (!showPrompts) return;
+                  setPromptTarget({ id, label });
+                  setPromptsOpen(true);
+                };
+                const scoped = (id) => `${promptTarget?.id === id ? ' is-prompt-target' : ''}${showPrompts ? ' lb-pick' : ''}`;
+                return (
+                <article key={step.step} id={`plan-step-${step.step}`} className="lb-sheet">
+                  <div className={`lb-sheet-head${scoped(`op:${step.step}`)}`} onClick={pick(`op:${step.step}`, step.title)}>
+                    <h2>{step.title}</h2>
+                    <span>{`Operation ${step.step}`}</span>
+                  </div>
+                  <div className="lb-sheet-body">
+                    {step.note ? <p className={`lb-op-note${scoped(`note:${step.step}`)}`} onClick={pick(`note:${step.step}`, 'Step text')}>{step.note}</p> : null}
+                    <div className={`lb-op-figure${scoped(`figure:${step.step}`)}`} onClick={pick(`figure:${step.step}`, 'Figure')}>
+                      <PlanShot index={index} />
+                      {(step.marks || []).map((mark) => (
+                        <span key={mark.n} className={`lb-op-mark${scoped(`mark:${step.step}:${mark.n}`)}`} style={{ left: mark.x, top: mark.y }} onClick={pick(`mark:${step.step}:${mark.n}`, `Callout ${mark.n}`)}>{mark.n}</span>
+                      ))}
+                    </div>
+                    {step.parts?.length ? (
+                      <table className={`lb-op-table${scoped(`table:${step.step}`)}`} onClick={pick(`table:${step.step}`, 'Parts table')}>
+                        <thead>
+                          <tr>
+                            <th>Item</th>
+                            <th>Part</th>
+                            <th>Name</th>
+                            <th>Qty</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {step.parts.map((part) => {
+                            const name = typeof part === 'string' ? part : part.name;
+                            const id = `part:${step.step}:${part.pn || name}`;
+                            return (
+                            <tr key={id} className={scoped(id).trim()} onClick={pick(id, name)}>
+                              <td>{part.item || ''}</td>
+                              <td>{part.pn || ''}</td>
+                              <td>{name}</td>
+                              <td>{part.qty || ''}</td>
+                            </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    ) : null}
+                  </div>
+                </article>
+                );
+              }) : planScope === 'operations' ? (
                 <article className="lb-sheet">
                   <div className="lb-sheet-head">
                     <h2>{doc.name}</h2>
@@ -832,7 +983,16 @@ export default function DocumentView({
               ))}
             </div>
           </div>
-          {panelOpen ? (
+          {promptsOpen ? (
+            <PromptPanel
+              target={promptTarget}
+              onClearTarget={() => setPromptTarget(null)}
+              history={askHistory}
+              onSend={(entry) => setAskHistory((items) => [...items, entry])}
+              original={source ? { fileName: source, steps: planSteps } : null}
+              onClose={() => setPromptsOpen(false)}
+            />
+          ) : panelOpen ? (
             <LayoutsPanel
               layouts={layouts}
               headerId={headerId}

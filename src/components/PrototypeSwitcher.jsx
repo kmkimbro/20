@@ -70,7 +70,7 @@ export default function PrototypeSwitcher() {
       style={{
         position: 'fixed',
         bottom: 16,
-        right: 16,
+        left: 16,
         zIndex: 400,
         pointerEvents: 'none',
       }}
@@ -81,7 +81,7 @@ export default function PrototypeSwitcher() {
             style={{
               position: 'absolute',
               bottom: '100%',
-              right: 0,
+              left: 0,
               marginBottom: 8,
               minWidth: 260,
               maxWidth: 320,

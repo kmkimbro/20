@@ -113,6 +113,7 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/ghost-steps" element={<LayoutBuilder storageKey="q20_ai_ghost_steps_v1" magicParser interaction="ghost-steps" />} />
               <Route path="/prototype/tag-onto-step" element={<LayoutBuilder storageKey="q20_ai_tag_step_v1" magicParser interaction="tag-step" />} />
               <Route path="/prototype/assembly-plan" element={<LayoutBuilder storageKey="q20_assembly_plan_v1" magicParser assemblyPlan />} />
+              <Route path="/prototype/infer-document" element={<LayoutBuilder storageKey="q20_infer_document_v1" inferDocument />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route
                 path="/prototype/tool-library-mid-fi"
