@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, Home, ChevronRight, ChevronDown, Plus, LayoutTemplate,
   Wrench, ClipboardList, Hexagon, Plug, FileText, LayoutGrid, List, Trash2,
@@ -116,8 +116,15 @@ export default function LayoutBuilder({
   const [placeholderHistory, setPlaceholderHistory] = useState({});
   const [importer, setImporter] = useState(null);
   const [planDocId, setPlanDocId] = useState(null);
+  const openedEmptyRef = useRef(false);
 
   useEffect(() => { saveState(state, storageKey); }, [state, storageKey]);
+
+  useEffect(() => {
+    if (!inferDocument || openedEmptyRef.current || state.documents.length > 0) return;
+    openedEmptyRef.current = true;
+    setImporter({ phase: 'form', projectId: selectedProjectId, page: 0, pageCount: 0, message: '' });
+  }, [inferDocument, state.documents.length, selectedProjectId]);
 
   const update = useCallback((patch) => {
     setState((prev) => (typeof patch === 'function' ? patch(prev) : { ...prev, ...patch }));
@@ -327,7 +334,7 @@ export default function LayoutBuilder({
   };
 
   const readDocument = (draft) => {
-    const projectId = importer?.projectId || selectedProjectId;
+    const projectId = draft.projectId || importer?.projectId || selectedProjectId;
     const { planSteps } = planFromSample(draft.sampleId, draft.adjustments);
     const doc = {
       id: uid('doc'),
@@ -337,7 +344,7 @@ export default function LayoutBuilder({
       cadFileLabel: draft.cadName,
       cadLinked: true,
       sourceName: draft.origin === 'both' ? draft.sourceName : '',
-      templateId: 'work_instruction',
+      templateId: draft.templateId || 'work_instruction',
       planAccepted: true,
       planScope: 'document',
       planSteps,
@@ -566,7 +573,11 @@ export default function LayoutBuilder({
                   <p className="ai-home-note">{INTERACTION_COPY[interaction]?.home}</p>
                 ) : null}
                 {magicParser || inferDocument ? (
-                  <button type="button" className="lb-btn-primary" onClick={() => openCreator(selectedProjectId)}>
+                  <button
+                    type="button"
+                    className="lb-btn-primary"
+                    onClick={() => openCreator(selectedProjectId)}
+                  >
                     <Plus size={14} /> New document
                   </button>
                 ) : null}
@@ -683,7 +694,9 @@ export default function LayoutBuilder({
                     <button
                       type="button"
                       className="lb-btn-primary"
-                      onClick={() => (magicParser || inferDocument ? openCreator(selectedProjectId) : addDocument(selectedProjectId))}
+                      onClick={() => (magicParser || inferDocument
+                        ? openCreator(selectedProjectId)
+                        : addDocument(selectedProjectId))}
                     >
                       <Plus size={14} /> New document
                     </button>

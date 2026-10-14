@@ -2042,6 +2042,13 @@
   overflow: hidden;
 }
 
+.lb-op-image-name {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #6B7280;
+}
+
 .lb-op-figure svg {
   display: block;
   width: 100%;
@@ -2058,9 +2065,9 @@
   justify-content: center;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: #F8E7A8;
-  border: 1px solid #8A6D12;
-  color: #8A6D12;
+  background: #4F6EF7;
+  border: 1px solid #4F6EF7;
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
 }

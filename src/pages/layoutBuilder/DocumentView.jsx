@@ -699,8 +699,12 @@ export default function DocumentView({
   });
 
   useEffect(() => {
+    if (showPrompts) {
+      setNav('doc');
+      return;
+    }
     if (planScope === 'operations' || planScope === 'document') setNav('cad');
-  }, [planScope]);
+  }, [planScope, showPrompts]);
 
   useEffect(() => {
     if (outline !== 'steps' || !pendingStep) return;
@@ -905,6 +909,7 @@ export default function DocumentView({
                         <span key={mark.n} className={`lb-op-mark${scoped(`mark:${step.step}:${mark.n}`)}`} style={{ left: mark.x, top: mark.y }} onClick={pick(`mark:${step.step}:${mark.n}`, `Callout ${mark.n}`)}>{mark.n}</span>
                       ))}
                     </div>
+                    {step.image ? <div className="lb-op-image-name">{step.image}</div> : null}
                     {step.parts?.length ? (
                       <table className={`lb-op-table${scoped(`table:${step.step}`)}`} onClick={pick(`table:${step.step}`, 'Parts table')}>
                         <thead>

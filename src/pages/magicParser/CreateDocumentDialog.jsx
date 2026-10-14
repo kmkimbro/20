@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link2, Paperclip, Upload, X } from 'lucide-react';
-import { adjustmentsFromPrompt, sampleForFile } from '../infer/samples.js';
+import { ChevronRight, Link2, Paperclip, Sparkles, Upload, X } from 'lucide-react';
+import { sampleForFile } from '../infer/samples.js';
 import '../infer/infer.css';
 
 const TEMPLATES = [
@@ -18,14 +18,14 @@ const PARSE_CHOICES = [
 ];
 
 const ALL_ON = { images: true, text: true, tables: true, headers: true };
-const CAD_ACCEPT = '.step,.stp,.iges,.igs,.stl,.obj';
+const CAD_ACCEPT = '.step,.stp,.iges,.igs,.stl,.obj,.gz';
 
 function isPdf(file) {
   return Boolean(file) && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
 }
 
 function isCad(file) {
-  return Boolean(file) && /\.(step|stp|iges|igs|stl|obj)$/i.test(file.name);
+  return Boolean(file) && /\.(step|stp|iges|igs|stl|obj)(\.gz)?$/i.test(file.name);
 }
 
 function FileChip({ name, onRemove }) {
@@ -77,20 +77,38 @@ function UploadZone({ title, hint, accept, hot, onHot, onFile, icon, fileName, o
 }
 
 const READ_STAGES = [
-  'Reading the PDF against the CAD model',
-  'Finding the tables and the steps',
-  'Pairing each picture with its step',
-  'Building the Quarter20 operations',
+  'Pulling the pictures out of this section',
+  'Writing an operation for each step, keeping the wording',
+  'Putting each picture and its callouts back where they were',
+  'Attaching the parts from the model and laying out the parts table',
 ];
 
-const CAD_STAGES = [
-  'Reading the CAD model',
-  'Matching parts to the catalog',
-  'Building the Quarter20 operations',
-  'Placing screenshots on the steps',
+const STEP_STAGES = [
+  'Reading the STEP',
+  'Building an operation for each step in the assembly',
+  'Placing a screenshot on each step',
+  'Adding the parts from the model',
 ];
 
-const PDF_NEEDS_CAD = 'This PDF is an existing document. Add a CAD file, or link one from your CAD library, before creating it.';
+const TEMPLATE_PROMPTS = {
+  work_instruction: `This is a work instruction. Keep each photo with its step, and read the table as operations.
+
+Extract the text exactly from each operation step. Add that text to the note and make sure it matches exactly. Rename the operation step to say what is done. Add the image for the step in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the operation steps. Add a parts table to each operation step. Make sure nothing overlaps on each document page.`,
+  quality_checklist: `This is a quality checklist. Keep each photo with its check, and read the table as checks.
+
+Extract the text exactly from each check. Add that text to the note and make sure it matches exactly. Rename the check to say what is verified. Add the image for the check in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the checks. Add a results table to each check. Make sure nothing overlaps on each document page.`,
+  drawing_release: `This is a drawing release package. Keep each view with its sheet, and read the table as the parts list.
+
+Extract the text exactly from each sheet. Add that text to the note and make sure it matches exactly. Rename the sheet to say what is released. Add the view for the sheet in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the sheets. Add a parts list to each sheet. Make sure nothing overlaps on each document page.`,
+  blank: `This is a document. Keep each photo with its section, and read the table as the content.
+
+Extract the text exactly from each section. Add that text to the note and make sure it matches exactly. Rename the section to say what it covers. Add the image for the section in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the sections. Add a table to each section. Make sure nothing overlaps on each document page.`,
+};
+
+function promptForTemplate(templateId) {
+  return TEMPLATE_PROMPTS[templateId] || TEMPLATE_PROMPTS.blank;
+}
+const SAMPLE_CAD_NAME = 'weldment_frame.step';
 
 function ParseRow({ options, onToggle }) {
   return (
@@ -109,7 +127,7 @@ function ParseRow({ options, onToggle }) {
   );
 }
 
-export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose, onCreateBlank, onCreateFromPdf, onCreateInfer }) {
+export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose, onCreateBlank, onCreateFromPdf, onCreateInfer, embedded = false }) {
   const [name, setName] = useState('');
   const [templateId, setTemplateId] = useState('work_instruction');
   const [pdf, setPdf] = useState(null);
@@ -119,7 +137,8 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
   const [cadHot, setCadHot] = useState(false);
   const [options, setOptions] = useState(ALL_ON);
   const [localError, setLocalError] = useState('');
-  const [description, setDescription] = useState('');
+  const [existingOpen, setExistingOpen] = useState(false);
+  const [prompt, setPrompt] = useState(() => promptForTemplate('work_instruction'));
   const [readStage, setReadStage] = useState(-1);
   const sentInfer = useRef(false);
   const inferPayload = useRef(null);
@@ -136,11 +155,17 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
     setCadHot(false);
     setOptions(ALL_ON);
     setLocalError('');
-    setDescription('');
+    setExistingOpen(false);
+    setPrompt(promptForTemplate('work_instruction'));
     setReadStage(-1);
     sentInfer.current = false;
     inferPayload.current = null;
   }, [creator]);
+
+  useEffect(() => {
+    if (!onCreateInfer) return;
+    setPrompt(promptForTemplate(templateId));
+  }, [templateId, onCreateInfer]);
 
   useEffect(() => {
     if (readStage < 0 || readStage >= stageList.current.length) return undefined;
@@ -197,31 +222,22 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
       cadSource: cadFile ? 'upload' : (linked ? 'library' : null),
     };
     if (onCreateInfer) {
-      if (pdf && !cadName) {
-        setLocalError(hasLibrary
-          ? PDF_NEEDS_CAD
-          : 'This PDF is an existing document. Add a CAD file before creating it.');
-        return;
-      }
-      if (!cadName) {
-        onCreateBlank(draft);
-        return;
-      }
-      const origin = pdf ? 'both' : 'cad';
-      stageList.current = origin === 'cad' ? CAD_STAGES : READ_STAGES;
+      const resolvedCad = cadName || SAMPLE_CAD_NAME;
+      const fromFile = (pdf?.name || (cadName ? resolvedCad : '')).replace(/\.(pdf|step|stp|iges|igs|stl|obj)(\.gz)?$/i, '');
+      stageList.current = pdf ? READ_STAGES : STEP_STAGES;
       inferPayload.current = {
-        sampleId: pdf ? sampleForFile(pdf.name) : sampleForFile(cadName, 'drawing'),
-        title: draft.name,
-        sourceName: pdf ? pdf.name : cadName,
-        cadName,
-        origin,
-        adjustments: adjustmentsFromPrompt(description, {
+        sampleId: sampleForFile(pdf?.name || resolvedCad),
+        title: name.trim() || fromFile || 'Frame weldment',
+        sourceName: pdf?.name || '',
+        cadName: resolvedCad,
+        origin: pdf ? 'both' : 'cad',
+        templateId,
+        adjustments: {
           pictures: true,
           table: true,
-          toolsToolkit: /tool/.test(description.toLowerCase()),
-          callouts: /callout|circle|number/.test(description.toLowerCase()),
-          showCtq: /ctq|quality|yellow/.test(description.toLowerCase()) || (!pdf && /ctq|quality/.test(description.toLowerCase())),
-        }),
+          callouts: true,
+          note: prompt,
+        },
       };
       sentInfer.current = false;
       setReadStage(0);
@@ -233,19 +249,22 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
 
   const reading = readStage >= 0;
 
-  return (
-    <div className="mp-overlay" role="presentation">
+  const dialog = (
       <div
-        className={`mp-dialog${onCreateInfer && !hasLibrary ? '' : ' is-wide'}`}
+        className={`mp-dialog${embedded ? ' is-embedded' : ''}`}
         role="dialog"
         aria-labelledby="mp-create-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="mp-dialog-head">
-          <h2 id="mp-create-title">Create New Document</h2>
-          <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose} disabled={working || reading}>
-            <X size={18} />
-          </button>
+          <div>
+            <h2 id="mp-create-title">Create New Document</h2>
+          </div>
+          {embedded ? null : (
+            <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose} disabled={working || reading}>
+              <X size={18} />
+            </button>
+          )}
         </div>
         <div className="mp-dialog-body">
           {reading ? (
@@ -269,7 +288,7 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
             </>
           ) : (
             <>
-              {hasLibrary ? <div className="mp-details-title">Document Details</div> : null}
+              {onCreateInfer || hasLibrary ? <div className="mp-details-title">Document Details</div> : null}
               <label className="mp-field" htmlFor="mp-doc-name">
                 Name
                 <input
@@ -296,73 +315,84 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
 
               {onCreateInfer ? (
                 <>
-                  {hasLibrary ? (
-                    <div className="mp-section">
-                      <div className="mp-section-label">CAD file</div>
-                      <div className="mp-cad-choice">
-                        <UploadZone
-                          title="Upload new CAD"
-                          hint="Click or drag file to this area to upload"
-                          accept={CAD_ACCEPT}
-                          hot={cadHot}
-                          onHot={setCadHot}
-                          onFile={takeCad}
-                          fileName={cadFile?.name}
-                          onRemove={() => setCadFile(null)}
-                        />
-                        <div className="mp-or">or</div>
-                        <div className="mp-link-card">
-                          <span className="mp-upload-icon"><Link2 size={18} /></span>
-                          <strong>Link existing</strong>
-                          <span>Choose from your CAD library</span>
-                          <select
-                            className="mp-input"
-                            aria-label="CAD library"
-                            value={linkedId}
-                            onChange={(event) => {
-                              setLinkedId(event.target.value);
-                              setCadFile(null);
-                              setLocalError('');
-                            }}
-                          >
-                            <option value="">Drop down</option>
-                            {cadLibrary.map((item) => (
-                              <option key={item.id} value={item.id}>{item.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mp-section">
-                      <div className="mp-section-label">CAD file</div>
+                  <div className="mp-section">
+                    <div className="mp-section-label">CAD file</div>
+                    <div className="mp-cad-choice is-compact">
                       <UploadZone
                         title="Upload new CAD"
-                        hint="Click or drag STEP to this area to upload"
+                        hint="Click or drag file to this area to upload"
                         accept={CAD_ACCEPT}
                         hot={cadHot}
                         onHot={setCadHot}
                         onFile={takeCad}
                         fileName={cadFile?.name}
                         onRemove={() => setCadFile(null)}
-                        attachBelow
                       />
+                      <div className="mp-or">or</div>
+                      <div className="mp-link-card">
+                        <span className="mp-upload-icon"><Link2 size={18} /></span>
+                        <strong>Link existing</strong>
+                        <span>Choose from your CAD library</span>
+                        <select
+                          className="mp-input"
+                          aria-label="CAD library"
+                          value={linkedId}
+                          onChange={(event) => {
+                            setLinkedId(event.target.value);
+                            setCadFile(null);
+                            setLocalError('');
+                          }}
+                        >
+                          <option value="">Drop down</option>
+                          {cadLibrary.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  )}
-                  <div className="mp-section">
-                    <div className="mp-section-label">PDF</div>
-                    <UploadZone
-                      title="Upload PDF"
-                      hint="Click or drag a PDF to this area to upload"
-                      accept="application/pdf,.pdf"
-                      hot={pdfHot}
-                      onHot={setPdfHot}
-                      onFile={takePdf}
-                      fileName={pdf?.name}
-                      onRemove={() => { setPdf(null); setLocalError(''); }}
-                      attachBelow
-                    />
                   </div>
+                  <div className="mp-existing">
+                      <button
+                        type="button"
+                        className="mp-expander"
+                        aria-expanded={existingOpen}
+                        onClick={() => setExistingOpen((open) => !open)}
+                      >
+                        <ChevronRight size={14} className={existingOpen ? 'is-open' : ''} />
+                        <Sparkles size={14} className="mp-expander-magic" aria-hidden />
+                        Existing document
+                      </button>
+                      {existingOpen ? (
+                        <div className="mp-existing-body">
+                          <UploadZone
+                            title={{
+                              work_instruction: 'Upload work instruction',
+                              quality_checklist: 'Upload quality checklist',
+                              drawing_release: 'Upload drawing package',
+                            }[templateId] || 'Upload document'}
+                            hint="Click or drag a PDF to this area"
+                            accept="application/pdf,.pdf"
+                            hot={pdfHot}
+                            onHot={setPdfHot}
+                            onFile={(file) => {
+                              takePdf(file);
+                              if (file && isPdf(file)) setPrompt(promptForTemplate(templateId));
+                            }}
+                            fileName={pdf?.name}
+                            onRemove={() => { setPdf(null); setLocalError(''); }}
+                          />
+                          <label className="mp-prompt" htmlFor="mp-premade-prompt">
+                            Prompt
+                            <textarea
+                              id="mp-premade-prompt"
+                              className="mp-input"
+                              value={prompt}
+                              onChange={(event) => setPrompt(event.target.value)}
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
                 </>
               ) : hasLibrary ? (
                 <>
@@ -476,28 +506,28 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
                   ) : null}
                 </div>
               )}
-              {onCreateInfer ? (
-                <label className="mp-field" htmlFor="mp-read-description">
-                  Description
-                  <textarea
-                    id="mp-read-description"
-                    className="mp-input inf-prompt"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    placeholder="This is a work instruction. Keep each photo with its step, and read the table as operations."
-                  />
-                </label>
-              ) : null}
-              {localError || creator.message ? <div className="mp-error" role="alert">{localError || creator.message}</div> : null}
+              {localError || creator?.message ? <div className="mp-error" role="alert">{localError || creator.message}</div> : null}
             </>
           )}
         </div>
         {!working && !reading ? (
           <div className="mp-dialog-actions">
-            <button type="button" className="mp-btn-create" onClick={create}>Create Document</button>
+            <button
+              type="button"
+              className="mp-btn-create"
+              onClick={create}
+            >
+              Create Document
+            </button>
           </div>
         ) : null}
       </div>
+  );
+
+  if (embedded) return <div className="inf-intake">{dialog}</div>;
+  return (
+    <div className="mp-overlay" role="presentation">
+      {dialog}
     </div>
   );
 }

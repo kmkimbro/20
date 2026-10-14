@@ -276,6 +276,7 @@ export function planFromSample() {
     step: index + 1,
     title: step.title,
     note: step.note,
+    image: `${index + 1}.1`,
     checked: true,
     parts: step.parts,
     marks: step.marks,

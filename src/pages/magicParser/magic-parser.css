@@ -181,6 +181,7 @@
   max-height: calc(100vh - 48px);
   background: #fff;
   border-radius: 12px;
+  overflow: hidden;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
   display: flex;
   flex-direction: column;
@@ -246,9 +247,14 @@
 .mp-dialog .mp-input {
   height: 40px;
   border-radius: 8px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
   border-color: #E5E7EB;
   font-weight: 400;
   color: #111827;
+  background-clip: padding-box;
 }
 
 .mp-dialog textarea.mp-input {
@@ -299,6 +305,7 @@
 .mp-upload-card {
   border: 1.5px dashed #D1D5DB;
   border-radius: 10px;
+  overflow: hidden;
   background: #F9FAFB;
   min-height: 124px;
   display: flex;
@@ -391,6 +398,69 @@
   align-items: stretch;
 }
 
+.mp-cad-choice.is-compact {
+  gap: 8px;
+}
+
+.mp-cad-choice.is-compact .mp-upload-card,
+.mp-cad-choice.is-compact .mp-link-card,
+.mp-existing-body .mp-upload-card {
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.mp-cad-choice.is-compact .mp-upload-card label,
+.mp-existing-body .mp-upload-card label {
+  min-height: 72px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.mp-cad-choice.is-compact .mp-upload-card label > span:not(.mp-upload-icon),
+.mp-existing-body .mp-upload-card label > span:not(.mp-upload-icon),
+.mp-cad-choice.is-compact .mp-link-card > span {
+  display: none;
+}
+
+.mp-cad-choice.is-compact .mp-upload-icon,
+.mp-existing-body .mp-upload-icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 0;
+}
+
+.mp-cad-choice.is-compact .mp-upload-icon svg,
+.mp-existing-body .mp-upload-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mp-cad-choice.is-compact .mp-link-card {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.mp-cad-choice.is-compact .mp-link-card .mp-input {
+  width: 100%;
+  height: 32px;
+  margin-top: 0;
+}
+
+.mp-cad-choice.is-compact .mp-file-chip,
+.mp-existing-body .mp-file-chip {
+  margin: 0 0 10px;
+}
+
 .mp-or {
   align-self: center;
   color: #9CA3AF;
@@ -400,6 +470,7 @@
 .mp-link-card {
   border: 1px solid #E5E7EB;
   border-radius: 10px;
+  overflow: hidden;
   background: #F9FAFB;
   min-height: 124px;
   display: flex;
@@ -426,6 +497,63 @@
 .mp-link-card .mp-input {
   margin-top: 10px;
   background-color: #fff;
+}
+
+.mp-existing {
+  margin-top: 16px;
+}
+
+.mp-expander {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #374151;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.mp-expander svg {
+  transition: transform 0.15s ease;
+}
+
+.mp-expander-magic {
+  color: #4F6EF7;
+  flex-shrink: 0;
+}
+
+.mp-expander svg.is-open {
+  transform: rotate(90deg);
+}
+
+.mp-existing-body {
+  margin-top: 10px;
+}
+
+.mp-existing-body .mp-upload-card {
+  min-height: 108px;
+}
+
+.mp-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mp-prompt textarea {
+  min-height: 168px;
+  border-radius: 8px;
+  font-weight: 400;
+  line-height: 1.45;
+  resize: vertical;
 }
 
 .mp-pdf-line {
@@ -526,6 +654,13 @@
 
 .mp-btn-create:hover {
   background: #2F5AE0;
+}
+
+.mp-btn-create:disabled,
+.mp-btn-create:disabled:hover {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  cursor: default;
 }
 
 .mp-dialog p {
