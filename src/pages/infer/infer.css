@@ -589,6 +589,14 @@ button.os-doc-link:hover { text-decoration: underline; }
   word-break: break-word;
 }
 
+.os-create .rf-choices {
+  grid-template-columns: 1fr;
+}
+
+.os-create .rf-title {
+  font-size: 16px;
+}
+
 .os-create .mp-dialog.is-embedded {
   width: 100%;
   max-height: none;

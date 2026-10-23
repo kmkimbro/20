@@ -31,7 +31,7 @@ export default function ReferenceFlow() {
   }
 
   if (source === 'onshape') {
-    return <OnshapeWorkspace onOpenDocument={setPending} />;
+    return <OnshapeWorkspace parseSetup onOpenDocument={setPending} />;
   }
 
   return (

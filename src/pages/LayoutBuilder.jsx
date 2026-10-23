@@ -126,7 +126,12 @@ export default function LayoutBuilder({
         planScope: 'document',
         planSteps,
         cadParsing: true,
-        ...(parseSetup ? { optionsSaved: false, readyAt: Date.now() + 12000 } : {}),
+        ...(parseSetup ? {
+          optionsSaved: Boolean(pendingInfer.optionsSaved),
+          parsePicks: pendingInfer.parsePicks || [],
+          parsePrompt: pendingInfer.parsePrompt || '',
+          readyAt: Date.now() + 12000,
+        } : {}),
       };
       return {
         ...loaded,
@@ -453,6 +458,7 @@ export default function LayoutBuilder({
             cadParsing: true,
             parsePicks: detail?.picks || [],
             ...(detail?.templateId ? { templateId: detail.templateId } : {}),
+            ...(detail?.sourceName ? { sourceName: detail.sourceName } : {}),
             readyAt: Math.max(doc.readyAt || 0, tail),
           }
           : doc

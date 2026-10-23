@@ -4,6 +4,7 @@ import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
 import ModelStage from './ModelStage.jsx';
 import CreateDocumentDialog from '../magicParser/CreateDocumentDialog.jsx';
 import ReferenceCreate from './ReferenceCreate.jsx';
+import ParseSetup from './ParseSetup.jsx';
 import './infer.css';
 
 const MODEL_NAME = '100-201 Engine Assembly';
@@ -28,25 +29,33 @@ const INSTANCES = [
   'Piston Assembly',
 ];
 
-export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = false, onUseCad }) {
+export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = false, onUseCad, parseSetup = false }) {
   const [cadName, setCadName] = useState('');
   const [allowNew, setAllowNew] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [detailTitle, setDetailTitle] = useState('');
 
   const upload = (allowNewDocument) => {
     setCadName(MODEL_FILE);
     setAllowNew(allowNewDocument);
     setCreating(false);
+    setDetailTitle('');
   };
 
-  const openExisting = (name) => {
-    onOpenDocument({
-      title: name,
-      cadName,
-      origin: 'cad',
-      templateId: 'work_instruction',
-      sourceName: '',
-    });
+  const openDetails = (title) => {
+    if (parseSetup) {
+      setDetailTitle(title);
+      return;
+    }
+    if (title) {
+      onOpenDocument({
+        title,
+        cadName,
+        origin: 'cad',
+        templateId: 'work_instruction',
+        sourceName: '',
+      });
+    }
   };
 
   return (
@@ -68,7 +77,28 @@ export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = fal
         </div>
         <aside className="os-panel">
           <div className="os-panel-mark"><Box size={18} /></div>
-          {creating ? (
+          {detailTitle ? (
+            <div className="os-create">
+              <button type="button" className="os-back" onClick={() => setDetailTitle('')}>
+                <ChevronLeft size={14} />
+                Documents
+              </button>
+              <p className="os-file">{detailTitle}</p>
+              <ParseSetup
+                embedded
+                onDone={(detail) => onOpenDocument({
+                  title: detailTitle,
+                  cadName,
+                  origin: detail.prompt === 'Existing document' ? 'both' : 'cad',
+                  templateId: detail.templateId,
+                  sourceName: detail.sourceName || '',
+                  optionsSaved: true,
+                  parsePicks: detail.picks,
+                  parsePrompt: detail.prompt,
+                })}
+              />
+            </div>
+          ) : creating ? (
             <div className="os-create">
               <button type="button" className="os-back" onClick={() => setCreating(false)}>
                 <ChevronLeft size={14} />
@@ -118,7 +148,7 @@ export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = fal
                     {cadName && allowNew && !onUseCad ? (
                       <tr>
                         <td>
-                          <button type="button" className="os-doc-link" onClick={() => setCreating(true)}>New document</button>
+                          <button type="button" className="os-doc-link" onClick={() => (parseSetup ? openDetails(MODEL_NAME) : setCreating(true))}>New document</button>
                         </td>
                         <td />
                       </tr>
@@ -127,7 +157,7 @@ export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = fal
                       <tr key={item.name}>
                         <td>
                           {cadName && !onUseCad ? (
-                            <button type="button" className="os-doc-link" onClick={() => openExisting(item.name)}>{item.name}</button>
+                            <button type="button" className="os-doc-link" onClick={() => openDetails(item.name)}>{item.name}</button>
                           ) : (
                             <span className="os-doc-link">{item.name}</span>
                           )}
