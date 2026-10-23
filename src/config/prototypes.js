@@ -178,7 +178,7 @@ export const PROTOTYPES = [
     id: 'ai-workflow-4',
     title: 'AI workflow 4',
     description:
-      'Import a CAD file. Opening the document while it uploads asks for a template, then an existing or new document.',
+      'Start from Onshape/SolidWorks or from Quarter20. The create modal stays closed until New document is opened.',
     path: '/prototype/ai-workflow-4',
   },
   {

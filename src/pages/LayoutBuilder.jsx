@@ -126,6 +126,7 @@ export default function LayoutBuilder({
         planScope: 'document',
         planSteps,
         cadParsing: true,
+        ...(parseSetup ? { optionsSaved: false, readyAt: Date.now() + 12000 } : {}),
       };
       return {
         ...loaded,
@@ -157,7 +158,7 @@ export default function LayoutBuilder({
       },
     };
   });
-  const [view, setView] = useState(pendingInfer ? 'document' : 'home');
+  const [view, setView] = useState(pendingInfer ? (parseSetup ? 'project' : 'document') : 'home');
   const [activeDocId, setActiveDocId] = useState(pendingId.current);
   const [librariesOpen, setLibrariesOpen] = useState(true);
   const [pluginsOpen, setPluginsOpen] = useState(false);
@@ -174,8 +175,7 @@ export default function LayoutBuilder({
   useEffect(() => { saveState(state, storageKey); }, [state, storageKey]);
 
   useEffect(() => {
-    if (!inferDocument || openedEmptyRef.current) return;
-    if (!referenceFlow && state.documents.length > 0) return;
+    if (!inferDocument || referenceFlow || openedEmptyRef.current || state.documents.length > 0) return;
     openedEmptyRef.current = true;
     setImporter({ phase: 'form', projectId: selectedProjectId, page: 0, pageCount: 0, message: '' });
   }, [inferDocument, referenceFlow, state.documents.length, selectedProjectId]);
