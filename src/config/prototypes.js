@@ -168,6 +168,20 @@ export const PROTOTYPES = [
     path: '/prototype/infer-document',
   },
   {
+    id: 'ai-workflow-3',
+    title: 'AI workflow 3',
+    description:
+      'Start from Onshape/SolidWorks or from Quarter20. From Q20 opens the existing document flow. Own saved state.',
+    path: '/prototype/ai-workflow-3',
+  },
+  {
+    id: 'ai-workflow-4',
+    title: 'AI workflow 4',
+    description:
+      'Import a CAD file. Opening the document while it uploads asks for a template, then an existing or new document.',
+    path: '/prototype/ai-workflow-4',
+  },
+  {
     id: 'assembly-plan',
     title: 'Assembly plan',
     description:

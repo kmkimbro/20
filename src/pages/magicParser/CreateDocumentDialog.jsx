@@ -91,18 +91,10 @@ const STEP_STAGES = [
 ];
 
 const TEMPLATE_PROMPTS = {
-  work_instruction: `This is a work instruction. Keep each photo with its step, and read the table as operations.
-
-Extract the text exactly from each operation step. Add that text to the note and make sure it matches exactly. Rename the operation step to say what is done. Add the image for the step in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the operation steps. Add a parts table to each operation step. Make sure nothing overlaps on each document page.`,
-  quality_checklist: `This is a quality checklist. Keep each photo with its check, and read the table as checks.
-
-Extract the text exactly from each check. Add that text to the note and make sure it matches exactly. Rename the check to say what is verified. Add the image for the check in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the checks. Add a results table to each check. Make sure nothing overlaps on each document page.`,
-  drawing_release: `This is a drawing release package. Keep each view with its sheet, and read the table as the parts list.
-
-Extract the text exactly from each sheet. Add that text to the note and make sure it matches exactly. Rename the sheet to say what is released. Add the view for the sheet in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the sheets. Add a parts list to each sheet. Make sure nothing overlaps on each document page.`,
-  blank: `This is a document. Keep each photo with its section, and read the table as the content.
-
-Extract the text exactly from each section. Add that text to the note and make sure it matches exactly. Rename the section to say what it covers. Add the image for the section in the same location as in the document. Extract any annotations and add them in the same location so the images match up. Add the appropriate parts to the sections. Add a table to each section. Make sure nothing overlaps on each document page.`,
+  work_instruction: 'Read the catalog, document spec, schema, and style guide. This is a work instruction: operations, notes, images, and parts follow that schema.',
+  quality_checklist: 'Read the catalog, document spec, schema, and style guide. This is a quality checklist: checks, notes, images, and results follow that schema.',
+  drawing_release: 'Read the catalog, document spec, schema, and style guide. This is a drawing release package: sheets, views, annotations, and the parts list follow that schema.',
+  blank: 'Read the catalog, document spec, schema, and style guide. This document follows that schema.',
 };
 
 function promptForTemplate(templateId) {
@@ -127,7 +119,7 @@ function ParseRow({ options, onToggle }) {
   );
 }
 
-export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose, onCreateBlank, onCreateFromPdf, onCreateInfer, embedded = false }) {
+export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose, onCreateBlank, onCreateFromPdf, onCreateInfer, embedded = false, presetCad = '' }) {
   const [name, setName] = useState('');
   const [templateId, setTemplateId] = useState('work_instruction');
   const [pdf, setPdf] = useState(null);
@@ -211,7 +203,7 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
   };
 
   const create = () => {
-    const cadName = cadFile?.name || linked?.name || '';
+    const cadName = cadFile?.name || linked?.name || presetCad || '';
     const draft = {
       name: name.trim() || pdf?.name.replace(/\.pdf$/i, '') || cadName.replace(/\.(step|stp|iges|igs|stl|obj)$/i, '') || 'Untitled Document',
       templateId,
@@ -239,8 +231,8 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
           note: prompt,
         },
       };
-      sentInfer.current = false;
-      setReadStage(0);
+      sentInfer.current = true;
+      onCreateInfer(inferPayload.current);
       return;
     }
     if (pdf) onCreateFromPdf(draft);
@@ -248,6 +240,22 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
   };
 
   const reading = readStage >= 0;
+
+  const templateField = (
+    <label className="mp-field" htmlFor="mp-doc-template">
+      Template
+      <select
+        id="mp-doc-template"
+        className="mp-input"
+        value={templateId}
+        onChange={(event) => setTemplateId(event.target.value)}
+      >
+        {TEMPLATES.map((item) => (
+          <option key={item.id} value={item.id}>{item.label}</option>
+        ))}
+      </select>
+    </label>
+  );
 
   const dialog = (
       <div
@@ -299,22 +307,11 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
                   placeholder="Type name"
                 />
               </label>
-              <label className="mp-field" htmlFor="mp-doc-template">
-                Template
-                <select
-                  id="mp-doc-template"
-                  className="mp-input"
-                  value={templateId}
-                  onChange={(event) => setTemplateId(event.target.value)}
-                >
-                  {TEMPLATES.map((item) => (
-                    <option key={item.id} value={item.id}>{item.label}</option>
-                  ))}
-                </select>
-              </label>
+              {onCreateInfer ? null : templateField}
 
               {onCreateInfer ? (
                 <>
+                  {presetCad ? null : (
                   <div className="mp-section">
                     <div className="mp-section-label">CAD file</div>
                     <div className="mp-cad-choice is-compact">
@@ -351,6 +348,7 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
                       </div>
                     </div>
                   </div>
+                  )}
                   <div className="mp-existing">
                       <button
                         type="button"
@@ -364,6 +362,7 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
                       </button>
                       {existingOpen ? (
                         <div className="mp-existing-body">
+                          {templateField}
                           <UploadZone
                             title={{
                               work_instruction: 'Upload work instruction',
@@ -374,22 +373,11 @@ export default function CreateDocumentDialog({ creator, cadLibrary = [], onClose
                             accept="application/pdf,.pdf"
                             hot={pdfHot}
                             onHot={setPdfHot}
-                            onFile={(file) => {
-                              takePdf(file);
-                              if (file && isPdf(file)) setPrompt(promptForTemplate(templateId));
-                            }}
+                            onFile={takePdf}
                             fileName={pdf?.name}
                             onRemove={() => { setPdf(null); setLocalError(''); }}
                           />
-                          <label className="mp-prompt" htmlFor="mp-premade-prompt">
-                            Prompt
-                            <textarea
-                              id="mp-premade-prompt"
-                              className="mp-input"
-                              value={prompt}
-                              onChange={(event) => setPrompt(event.target.value)}
-                            />
-                          </label>
+                          <p className="mp-schema-note">{promptForTemplate(templateId)}</p>
                         </div>
                       ) : null}
                     </div>

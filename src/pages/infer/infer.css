@@ -364,3 +364,246 @@
 .inf-source-table td { border: 1px solid #E5E7EB; padding: 8px; vertical-align: top; text-align: left; }
 .inf-source-table th { background: #F9FAFB; font-size: 12px; }
 .inf-source-table svg { width: 140px; }
+
+.aw3-start {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0F2F7;
+  font-family: inherit;
+  color: #111827;
+}
+
+.aw3-start-card {
+  width: min(520px, calc(100vw - 48px));
+  padding: 32px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  text-align: center;
+}
+
+.aw3-start-card h1 {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.aw3-start-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.aw3-start-actions button {
+  min-width: 160px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #4F6EF7;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.os-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #F4F6F8;
+  color: #1F2937;
+}
+
+.os-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 42px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid #E5E7EB;
+  font-size: 13px;
+}
+
+.os-top strong { font-size: 15px; }
+
+.os-top span {
+  color: #6B7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px 1fr 340px;
+}
+
+.os-tree {
+  background: #fff;
+  border-right: 1px solid #E5E7EB;
+  padding: 12px 14px;
+  overflow: auto;
+}
+
+.os-tree p {
+  margin: 0 0 8px;
+  color: #6B7280;
+  font-size: 12px;
+}
+
+.os-tree strong { font-size: 13px; }
+
+.os-tree ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.os-tree li { margin: 4px 0; }
+
+.os-stage {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.os-stage svg { width: min(640px, 100%); height: auto; }
+
+.os-panel {
+  background: #fff;
+  border-left: 1px solid #E5E7EB;
+  padding: 16px;
+  overflow: auto;
+}
+
+.os-panel-mark {
+  display: flex;
+  justify-content: flex-end;
+  color: #2563EB;
+  margin-bottom: 8px;
+}
+
+.os-action {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #2563EB;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.os-action:hover { background: #1D4ED8; }
+
+.os-history {
+  margin-top: 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.os-history h2 {
+  margin: 0;
+  padding: 12px 12px 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.os-ask {
+  margin: 8px 12px 0;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.os-history table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.os-history th {
+  padding: 8px 12px;
+  text-align: left;
+  color: #6B7280;
+  font-weight: 600;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.os-history td {
+  padding: 8px 12px;
+  border-top: 1px solid #F3F4F6;
+  vertical-align: middle;
+}
+
+.os-doc-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563EB;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.os-doc-link:hover { text-decoration: underline; }
+
+.os-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563EB;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.os-file {
+  margin: 0 0 8px;
+  color: #6B7280;
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.os-create .mp-dialog.is-embedded {
+  width: 100%;
+  max-height: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.os-create .mp-dialog-head { display: none; }
+
+.os-create .mp-dialog-body { padding: 0 0 8px; }
+
+.os-create .mp-dialog-actions { padding: 8px 0 0; }
+
+.os-create .inf-intake { max-width: none; }
+
+.aw3-start-actions button:hover {
+  background: #3d5de8;
+}

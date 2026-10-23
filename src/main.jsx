@@ -13,6 +13,8 @@ import Megadocument2 from './pages/Megadocument2.jsx';
 import Des57ProceduresV1 from './pages/Des57ProceduresV1.jsx';
 import AssemblyMap from './pages/AssemblyMap.jsx';
 import LayoutBuilder from './pages/LayoutBuilder.jsx';
+import AiWorkflowStart from './pages/infer/AiWorkflowStart.jsx';
+import ReferenceFlow from './pages/infer/ReferenceFlow.jsx';
 import MegadocumentEmptyState from './pages/MegadocumentEmptyState.jsx';
 import App from './App.jsx';
 import '../styles.css';
@@ -114,6 +116,8 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/tag-onto-step" element={<LayoutBuilder storageKey="q20_ai_tag_step_v1" magicParser interaction="tag-step" />} />
               <Route path="/prototype/assembly-plan" element={<LayoutBuilder storageKey="q20_assembly_plan_v1" magicParser assemblyPlan />} />
               <Route path="/prototype/infer-document" element={<LayoutBuilder storageKey="q20_infer_document_v1" inferDocument />} />
+              <Route path="/prototype/ai-workflow-3" element={<AiWorkflowStart />} />
+              <Route path="/prototype/ai-workflow-4" element={<ReferenceFlow />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route
                 path="/prototype/tool-library-mid-fi"

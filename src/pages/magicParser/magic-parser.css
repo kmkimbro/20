@@ -146,6 +146,12 @@
   background: #fff;
 }
 
+.mp-input:focus {
+  outline: none;
+  border-color: #4F6EF7;
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.15);
+}
+
 .mp-hint {
   margin: 6px 0 0;
   color: #9CA3AF;
@@ -262,6 +268,13 @@
   min-height: 72px;
 }
 
+.mp-dialog .mp-input:focus,
+.mp-dialog textarea.mp-input:focus {
+  outline: none;
+  border-color: #4F6EF7;
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.15);
+}
+
 .mp-dialog select.mp-input {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, #6B7280 50%), linear-gradient(135deg, #6B7280 50%, transparent 50%);
@@ -344,10 +357,15 @@
 
 .mp-upload-card input {
   position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  font-size: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .mp-upload-card.is-hot {
@@ -531,7 +549,22 @@
 }
 
 .mp-existing-body {
-  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.mp-existing-body .mp-field {
+  margin-top: 0;
+}
+
+.mp-schema-note {
+  margin: 0;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.45;
 }
 
 .mp-existing-body .mp-upload-card {
@@ -554,6 +587,47 @@
   font-weight: 400;
   line-height: 1.45;
   resize: vertical;
+}
+
+.mp-parse-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mp-parse-status {
+  margin: 0;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mp-parse-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mp-parse-chips button {
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 12px;
+  color: #374151;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mp-parse-chips button.is-on {
+  border-color: #4F6EF7;
+  background: #EEF1FE;
+  color: #2436B0;
+}
+
+.mp-parse-ask .mp-prompt textarea {
+  min-height: 96px;
 }
 
 .mp-pdf-line {

@@ -8,6 +8,7 @@ import Header from '../../components/Header.jsx';
 import CadView from '../../components/CadView.jsx';
 import ModelStage from '../infer/ModelStage.jsx';
 import PromptPanel from '../infer/PromptPanel.jsx';
+import ParseSetup from '../infer/ParseSetup.jsx';
 import {
   C, CURRENT_USER, DATE_FORMATS, PAGE_FORMATS, DOC_PAGES, PRINT_PAGES, DOC_TEMPLATES,
   REF_DATE, formatDate, resolveToken, cellCount, GRID_COLS, gridRowCount, blockJustify,
@@ -430,6 +431,14 @@ function DocCell({
   );
 }
 
+const CAD_PARSE_LINES = [
+  'Reading the STEP',
+  'Building an operation for each step in the assembly',
+  'Placing a screenshot on each step',
+  'Adding the parts from the model',
+];
+const CAD_PARSE_OPTIONS = ['Images', 'Tables', 'Text', 'Callouts', 'Parts'];
+
 function tokenLabelFallback(token) {
   if (token?.label) return token.label;
   if (token?.id === 'revision') return 'Revision';
@@ -668,6 +677,9 @@ export default function DocumentView({
   planSteps = null,
   planScope = null,
   awaitingPlan = false,
+  cadParsing = false,
+  onCadParsed,
+  parseSetup = false,
 }) {
   const [nav, setNav] = useState('doc');
   const [promptsOpen, setPromptsOpen] = useState(false);
@@ -678,8 +690,11 @@ export default function DocumentView({
   const [cadOpId, setCadOpId] = useState(null);
   const [activePage, setActivePage] = useState('op2');
   const [panelTab, setPanelTab] = useState('layouts');
+  const [parsePass, setParsePass] = useState(0);
+  const [parsePrompt, setParsePrompt] = useState('');
+  const [parsePicks, setParsePicks] = useState(['Images', 'Tables', 'Text']);
   const hasOps = Array.isArray(planSteps) && planSteps.length > 0;
-  const generated = hasOps && planScope !== 'operations';
+  const generated = hasOps && planScope !== 'operations' && !cadParsing;
   const pageCount = generated ? planSteps.length : PRINT_PAGES.length;
   const cadOps = hasOps
     ? planSteps.map((step) => ({
@@ -699,6 +714,19 @@ export default function DocumentView({
   });
 
   useEffect(() => {
+    if (!cadParsing) return;
+    setParsePass(0);
+    setParsePrompt('');
+    setParsePicks(['Images', 'Tables', 'Text']);
+  }, [doc.id, cadParsing]);
+
+  useEffect(() => {
+    if (!cadParsing || parsePass >= CAD_PARSE_LINES.length) return undefined;
+    const id = window.setTimeout(() => setParsePass((value) => value + 1), 2200);
+    return () => window.clearTimeout(id);
+  }, [cadParsing, parsePass]);
+
+  useEffect(() => {
     if (showPrompts) {
       setNav('doc');
       return;
@@ -715,6 +743,12 @@ export default function DocumentView({
   const source = showPrompts && generated
     ? (doc.sourceName || `${(doc.name || 'Work instruction').replace(/\.pdf$/i, '')}.pdf`)
     : '';
+
+  const cadDone = cadParsing && parsePass >= CAD_PARSE_LINES.length;
+
+  const confirmParse = () => {
+    onCadParsed?.({ prompt: parsePrompt, picks: parsePicks });
+  };
 
   const visibleSheets = activePage === 'op2' || activePage === 'op2-sub'
     ? PRINT_PAGES
@@ -845,7 +879,18 @@ export default function DocumentView({
               }}
             />
             <div className="lb-doc-canvas">
-              {outline === 'history' && source ? (
+              {cadParsing ? (
+                <article className="lb-sheet lb-cad-wait">
+                  <div className="lb-sheet-head">
+                    <h2>{doc.cadFileLabel || 'CAD'}</h2>
+                  </div>
+                  <div className="lb-sheet-body">
+                    <p className="lb-cad-wait-status">
+                      {parseSetup ? 'The document is still being created.' : CAD_PARSE_LINES[Math.min(parsePass, CAD_PARSE_LINES.length - 1)]}
+                    </p>
+                  </div>
+                </article>
+              ) : outline === 'history' && source ? (
                 <article className="lb-sheet">
                   <div className="lb-sheet-head">
                     <h2>Document Version History</h2>
@@ -1013,6 +1058,61 @@ export default function DocumentView({
           ) : null}
         </div>
       )}
+      {cadParsing && parseSetup && !doc.optionsSaved ? (
+        <ParseSetup
+          key={doc.id}
+          onDone={(detail) => onCadParsed?.(detail)}
+        />
+      ) : null}
+      {cadParsing && !parseSetup ? (
+        <div className="mp-overlay lb-parse-modal" role="presentation">
+          <div className="mp-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
+            <div className="mp-dialog-head">
+              <h2 id="lb-parse-ask-title">How should this be parsed?</h2>
+            </div>
+            <div className="mp-dialog-body mp-parse-ask">
+              <p className="lb-parse-note">{cadDone ? 'The CAD is done.' : 'The CAD is still being read.'}</p>
+              <ol className="lb-parse-steps">
+                {CAD_PARSE_LINES.map((line, index) => (
+                  <li key={line} className={index < parsePass ? 'is-done' : index === parsePass ? 'is-now' : ''}>
+                    {line}
+                  </li>
+                ))}
+              </ol>
+              <div className="mp-parse-chips">
+                {CAD_PARSE_OPTIONS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={parsePicks.includes(label) ? 'is-on' : ''}
+                    aria-pressed={parsePicks.includes(label)}
+                    onClick={() => setParsePicks((current) => (
+                      current.includes(label) ? current.filter((item) => item !== label) : [...current, label]
+                    ))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <label className="mp-prompt" htmlFor="lb-parse-ask-prompt">
+                Prompt
+                <textarea
+                  id="lb-parse-ask-prompt"
+                  className="mp-input"
+                  value={parsePrompt}
+                  onChange={(event) => setParsePrompt(event.target.value)}
+                  placeholder="Add anything else this document needs"
+                />
+              </label>
+            </div>
+            <div className="mp-dialog-actions">
+              <button type="button" className="mp-btn-create" onClick={confirmParse} disabled={!cadDone}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
