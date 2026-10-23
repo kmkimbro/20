@@ -101,10 +101,44 @@
   font-weight: 700;
 }
 
+.rf-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #EEF1FE;
+  color: #4F6EF7;
+}
+
+.rf-tile-icon.is-magic {
+  background: #EEF1FE;
+  color: #4F6EF7;
+}
+
+.rf-choices button.is-on .rf-tile-icon {
+  background: #fff;
+}
+
 .rf-choices button span {
   color: #6B7280;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.rf-choices input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .rf-choices button.is-on {

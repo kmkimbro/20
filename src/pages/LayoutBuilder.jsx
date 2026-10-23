@@ -130,7 +130,7 @@ export default function LayoutBuilder({
           optionsSaved: Boolean(pendingInfer.optionsSaved),
           parsePicks: pendingInfer.parsePicks || [],
           parsePrompt: pendingInfer.parsePrompt || '',
-          readyAt: Date.now() + 12000,
+          readyAt: Date.now() + 180000,
         } : {}),
       };
       return {
@@ -426,7 +426,7 @@ export default function LayoutBuilder({
       planSteps,
       cadParsing: true,
       optionsSaved: false,
-      readyAt: Date.now() + 12000,
+      readyAt: Date.now() + 180000,
     };
     update((prev) => ({
       ...prev,
@@ -447,7 +447,7 @@ export default function LayoutBuilder({
   };
 
   const saveParseOptions = (docId, detail) => {
-    const tail = Date.now() + 8000;
+    const tail = Date.now() + 45000;
     update((prev) => ({
       ...prev,
       documents: prev.documents.map((doc) => (
