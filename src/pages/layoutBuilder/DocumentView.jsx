@@ -1058,7 +1058,7 @@ export default function DocumentView({
           ) : null}
         </div>
       )}
-      {cadParsing && parseSetup && !doc.optionsSaved ? (
+      {parseSetup && !doc.optionsSaved ? (
         <ParseSetup
           key={doc.id}
           onDone={(detail) => onCadParsed?.(detail)}

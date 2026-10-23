@@ -95,6 +95,8 @@ export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = fal
                   optionsSaved: true,
                   parsePicks: detail.picks,
                   parsePrompt: detail.prompt,
+                  planSteps: detail.planSteps,
+                  planScope: detail.planScope,
                 })}
               />
             </div>

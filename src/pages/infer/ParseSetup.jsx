@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Camera, Check, ClipboardList, File, Hexagon, Layers, MessageSquare, PenLine, Sparkles, Table, Type,
+  Camera, Check, ChevronLeft, ClipboardList, File, Hexagon, Layers, ListOrdered, MessageSquare, PenLine, Sparkles, Table, Type,
 } from 'lucide-react';
+import AssemblyPlanModal from '../magicParser/AssemblyPlanModal.jsx';
 import './reference-flow.css';
 
 const DOC_TYPES = [
@@ -10,9 +11,11 @@ const DOC_TYPES = [
   { id: 'drawing_release', label: 'Drawing package', detail: 'Sheets, views, annotations, and parts.', icon: PenLine },
   { id: 'blank', label: 'Blank document', detail: 'Start empty and add the content yourself.', icon: File },
   { id: 'auto_assembly', label: 'Auto Assembly', detail: 'We will generate preliminary operations for you.', icon: Layers },
+  { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
 ];
 
 const EXTRACT = [
+  { id: 'Operations', label: 'Operations', detail: 'Steps from the document.', icon: ListOrdered },
   { id: 'Images', label: 'Images', detail: 'Pictures from the model.', icon: Camera },
   { id: 'Tables', label: 'Tables', detail: 'Rows of parts and data.', icon: Table },
   { id: 'Text', label: 'Text', detail: 'Notes and descriptions.', icon: Type },
@@ -20,40 +23,58 @@ const EXTRACT = [
   { id: 'Parts', label: 'Parts', detail: 'Components in the assembly.', icon: Hexagon },
 ];
 
-function isPdf(file) {
-  return Boolean(file) && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
-}
-
 export default function ParseSetup({ onDone, embedded = false }) {
-  const fileRef = useRef(null);
   const [step, setStep] = useState('type');
   const [docType, setDocType] = useState(null);
-  const [pdf, setPdf] = useState(null);
-  const [picks, setPicks] = useState(['Images', 'Tables', 'Text']);
+  const [picks, setPicks] = useState([]);
+  const [planOpen, setPlanOpen] = useState(false);
 
   const title = step === 'extract'
-    ? 'What do you want to extract from this?'
+    ? 'What do you want to import?'
     : 'What kind of document do you want to create?';
 
-  const takeFile = (file) => {
-    if (!isPdf(file)) return;
-    setPdf(file);
-    setStep('extract');
+  const chooseType = (id) => {
+    setDocType(id);
+    if (id === 'import') setStep('extract');
+    if (id === 'auto_assembly') setPlanOpen(true);
   };
 
-  const finish = () => onDone({
-    templateId: docType || 'work_instruction',
+  const finish = (plan) => onDone({
+    templateId: docType === 'import' ? 'work_instruction' : (docType || 'work_instruction'),
     picks: step === 'extract' ? picks : [],
     prompt: step === 'extract' ? 'Existing document' : (docType === 'auto_assembly' ? 'Auto Assembly' : 'New document'),
-    sourceName: step === 'extract' && pdf ? pdf.name : '',
+    sourceName: '',
+    planSteps: plan?.planSteps,
+    planScope: plan?.planScope,
   });
+
+  const next = () => {
+    if (step === 'type' && docType === 'import') {
+      setStep('extract');
+      return;
+    }
+    if (step === 'type' && docType === 'auto_assembly') {
+      setPlanOpen(true);
+      return;
+    }
+    finish();
+  };
+
+  const acceptPlan = (steps, scope) => {
+    finish({
+      planSteps: steps.filter((item) => item.checked),
+      planScope: scope,
+    });
+  };
 
   const form = (
     <>
-      {embedded ? <h2 className="rf-title">{title}</h2> : null}
+      {embedded ? (
+        <TitleRow title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
+      ) : null}
       {step === 'extract' ? (
         <>
-          <p className="rf-lead">{pdf?.name}</p>
+          <p className="rf-lead">Select elements of the document that you want to convert to a Quarter20 document.</p>
           <div className="rf-choices">
             {EXTRACT.map((item) => (
               <button
@@ -71,6 +92,13 @@ export default function ParseSetup({ onDone, embedded = false }) {
               </button>
             ))}
           </div>
+          <SelectAll
+            checked={picks.length === EXTRACT.length}
+            indeterminate={picks.length > 0 && picks.length < EXTRACT.length}
+            onChange={() => setPicks((current) => (
+              current.length === EXTRACT.length ? [] : EXTRACT.map((item) => item.id)
+            ))}
+          />
         </>
       ) : (
         <div className="rf-choices">
@@ -80,27 +108,13 @@ export default function ParseSetup({ onDone, embedded = false }) {
               type="button"
               className={docType === item.id ? 'is-on' : ''}
               aria-pressed={docType === item.id}
-              onClick={() => setDocType(item.id)}
+              onClick={() => chooseType(item.id)}
             >
-              <TileIcon icon={item.icon} />
+              <TileIcon icon={item.icon} magic={item.magic} />
               <strong>{item.label}</strong>
               <span>{item.detail}</span>
             </button>
           ))}
-          <button type="button" onClick={() => fileRef.current?.click()}>
-            <TileIcon icon={Sparkles} magic />
-            <strong>Import</strong>
-            <span>Upload your own document and make a Quarter20 document.</span>
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/pdf,.pdf"
-            onChange={(event) => {
-              takeFile(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-          />
         </div>
       )}
     </>
@@ -108,20 +122,25 @@ export default function ParseSetup({ onDone, embedded = false }) {
 
   const actions = (
     <div className="rf-actions">
-      {step === 'extract' ? (
-        <button type="button" className="rf-back" onClick={() => setStep('type')}>Back</button>
-      ) : <span />}
-      <button type="button" className="rf-next" disabled={step === 'type' && !docType} onClick={finish}>
+      <span />
+      <button type="button" className="rf-next" disabled={step === 'type' && !docType} onClick={next}>
         Done
       </button>
     </div>
   );
+
+  const plan = planOpen ? (
+    <AssemblyPlanModal onClose={() => setPlanOpen(false)} onAccept={acceptPlan} />
+  ) : null;
+
+  if (planOpen && !embedded) return plan;
 
   if (embedded) {
     return (
       <div className="rf-embedded">
         {form}
         {actions}
+        {plan}
       </div>
     );
   }
@@ -130,12 +149,40 @@ export default function ParseSetup({ onDone, embedded = false }) {
     <div className="mp-overlay lb-parse-modal" role="presentation">
       <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
         <div className="mp-dialog-head">
-          <h2 id="lb-parse-ask-title">{title}</h2>
+          <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
         </div>
         <div className="mp-dialog-body">{form}</div>
         {actions}
       </div>
     </div>
+  );
+}
+
+function TitleRow({ title, onBack, id }) {
+  return (
+    <div className="rf-title-row">
+      {onBack ? (
+        <button type="button" className="rf-title-back" aria-label="Back" onClick={onBack}>
+          <ChevronLeft size={18} />
+        </button>
+      ) : null}
+      <h2 id={id} className={id ? undefined : 'rf-title'}>{title}</h2>
+    </div>
+  );
+}
+
+function SelectAll({ checked, indeterminate, onChange }) {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
+  return (
+    <label className="rf-select-all">
+      <input ref={inputRef} type="checkbox" checked={checked} onChange={onChange} />
+      Select all
+    </label>
   );
 }
 

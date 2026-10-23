@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronLeft } from 'lucide-react';
 import './assembly-plan.css';
 
 const PLAN = [
@@ -333,14 +334,12 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="plan-head">
+          <button type="button" className="plan-title-back" aria-label="Back" onClick={() => finish(null)}>
+            <ChevronLeft size={18} />
+          </button>
           <h2 id="plan-title">Assembly plan</h2>
           <span className="draft-pill">Generated draft</span>
           <button ref={closeBtn} type="button" className="close-btn" aria-label="Close" onClick={() => finish(null)}>×</button>
-        </div>
-        <div className="plan-actions">
-          <button type="button" className="accept" onClick={() => finish('document')}>Create operations and document</button>
-          <button type="button" className="accept-secondary" onClick={() => finish('operations')}>Create operations only</button>
-          <button type="button" className="accept-quiet" onClick={() => finish(null)}>Do not accept</button>
         </div>
         <div
           className="steps"
@@ -403,6 +402,10 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
               </section>
             );
           })}
+        </div>
+        <div className="plan-actions">
+          <button type="button" className="accept" onClick={() => finish('document')}>Create operations and document</button>
+          <button type="button" className="accept-secondary" onClick={() => finish('operations')}>Create operations only</button>
         </div>
       </div>
     </div>,

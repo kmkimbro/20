@@ -123,8 +123,8 @@ export default function LayoutBuilder({
         sourceName: pendingInfer.origin === 'both' ? pendingInfer.sourceName : '',
         templateId: pendingInfer.templateId || 'work_instruction',
         planAccepted: true,
-        planScope: 'document',
-        planSteps,
+        planScope: pendingInfer.planScope || 'document',
+        planSteps: pendingInfer.planSteps?.length ? pendingInfer.planSteps : planSteps,
         cadParsing: true,
         ...(parseSetup ? {
           optionsSaved: Boolean(pendingInfer.optionsSaved),
@@ -140,6 +140,9 @@ export default function LayoutBuilder({
           [doc.id]: { headerId: null, footerId: null, values: { date_format: 'us', page_format: 'pageN' } },
         },
       };
+    }
+    if (inferDocument && referenceFlow) {
+      return { ...loaded, documents: [], docState: {} };
     }
     if (inferDocument) {
       const onlySeed = loaded.documents.every((doc) => doc.id === 'doc-1' || doc.id === 'doc-2');
@@ -459,6 +462,8 @@ export default function LayoutBuilder({
             parsePicks: detail?.picks || [],
             ...(detail?.templateId ? { templateId: detail.templateId } : {}),
             ...(detail?.sourceName ? { sourceName: detail.sourceName } : {}),
+            ...(detail?.planSteps ? { planSteps: detail.planSteps, planAccepted: true } : {}),
+            ...(detail?.planScope ? { planScope: detail.planScope } : {}),
             readyAt: Math.max(doc.readyAt || 0, tail),
           }
           : doc
