@@ -34,6 +34,19 @@ export default function PrototypeGallery() {
       >
         ← Back to app (production)
       </Link>
+      <Link
+        to="/prototype/design-system"
+        style={{
+          display: 'inline-block',
+          marginBottom: 24,
+          marginLeft: 16,
+          color: '#4F6EF7',
+          textDecoration: 'none',
+          fontWeight: 500,
+        }}
+      >
+        Design system
+      </Link>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {PROTOTYPES.map((p) => {
           const cardStyle = {
