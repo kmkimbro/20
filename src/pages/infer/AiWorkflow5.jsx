@@ -14,6 +14,7 @@ export default function AiWorkflow5() {
         inferDocument
         referenceFlow
         parseSetup
+        setupInUpload
       />
     );
   }
@@ -25,6 +26,7 @@ export default function AiWorkflow5() {
         storageKey="q20_ai_workflow_5_onshape_v1"
         inferDocument
         parseSetup
+        setupInUpload
         pendingInfer={pending}
       />
     );

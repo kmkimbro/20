@@ -106,6 +106,7 @@ export default function LayoutBuilder({
   linkedCad = '',
   onLinkIntegration,
   parseSetup = false,
+  setupInUpload = false,
 } = {}) {
   const pendingId = useRef(pendingInfer ? uid('doc') : null);
   const [state, setState] = useState(() => {
@@ -430,6 +431,13 @@ export default function LayoutBuilder({
       cadParsing: true,
       optionsSaved: false,
       readyAt: Date.now() + 180000,
+      ...(draft.setup ? {
+        optionsSaved: true,
+        parsePicks: draft.setup.picks || [],
+        parseDocType: draft.setup.docType || null,
+        ...(draft.setup.planSteps ? { planSteps: draft.setup.planSteps } : {}),
+        ...(draft.setup.planScope ? { planScope: draft.setup.planScope } : {}),
+      } : {}),
     };
     update((prev) => ({
       ...prev,
@@ -460,6 +468,7 @@ export default function LayoutBuilder({
             optionsSaved: true,
             cadParsing: true,
             parsePicks: detail?.picks || [],
+            ...(detail?.docType ? { parseDocType: detail.docType } : {}),
             ...(detail?.templateId ? { templateId: detail.templateId } : {}),
             ...(detail?.sourceName ? { sourceName: detail.sourceName } : {}),
             ...(detail?.planSteps ? { planSteps: detail.planSteps, planAccepted: true } : {}),
@@ -581,6 +590,7 @@ export default function LayoutBuilder({
           planScope={activeDoc.planScope || (inferDocument ? 'document' : null)}
           cadParsing={Boolean(activeDoc.cadParsing)}
           parseSetup={parseSetup}
+          setupInUpload={setupInUpload}
           onCadParsed={(detail) => (
             parseSetup ? saveParseOptions(activeDoc.id, detail) : finishCadParse(activeDoc.id, detail)
           )}
@@ -899,6 +909,7 @@ export default function LayoutBuilder({
         <ReferenceCreate
           creator={importer}
           cadLibrary={state.cadLibrary || []}
+          setupInUpload={setupInUpload}
           onClose={() => { if (importer?.phase !== 'working') setImporter(null); }}
           onCreate={readDocument}
         />

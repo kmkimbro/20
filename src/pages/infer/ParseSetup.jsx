@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Camera, Check, ChevronLeft, ClipboardList, File, Hexagon, Layers, ListOrdered, MessageSquare, PenLine, Sparkles, Table, Type,
+  Camera, Check, ChevronLeft, ClipboardList, File, Hexagon, Layers, ListOrdered, MessageSquare, PenLine, Sparkles, Table, Type, X,
 } from 'lucide-react';
 import AssemblyPlanModal from '../magicParser/AssemblyPlanModal.jsx';
 import './reference-flow.css';
@@ -23,10 +23,12 @@ const EXTRACT = [
   { id: 'Parts', label: 'Parts', detail: 'Components in the assembly.', icon: Hexagon },
 ];
 
-export default function ParseSetup({ onDone, embedded = false }) {
+export default function ParseSetup({
+  onDone, embedded = false, onBack = null, onClose = null, initial = null,
+}) {
   const [step, setStep] = useState('type');
-  const [docType, setDocType] = useState(null);
-  const [picks, setPicks] = useState([]);
+  const [docType, setDocType] = useState(initial?.docType || null);
+  const [picks, setPicks] = useState(initial?.picks || []);
   const [planOpen, setPlanOpen] = useState(false);
 
   const title = step === 'extract'
@@ -44,6 +46,7 @@ export default function ParseSetup({ onDone, embedded = false }) {
     picks: step === 'extract' ? picks : [],
     prompt: step === 'extract' ? 'Existing document' : (docType === 'auto_assembly' ? 'Auto Assembly' : 'New document'),
     sourceName: '',
+    docType,
     planSteps: plan?.planSteps,
     planScope: plan?.planScope,
   });
@@ -70,7 +73,7 @@ export default function ParseSetup({ onDone, embedded = false }) {
   const form = (
     <>
       {embedded ? (
-        <TitleRow title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
+        <TitleRow title={title} onBack={step === 'extract' ? () => setStep('type') : onBack} />
       ) : null}
       {step === 'extract' ? (
         <>
@@ -149,7 +152,12 @@ export default function ParseSetup({ onDone, embedded = false }) {
     <div className="mp-overlay lb-parse-modal" role="presentation">
       <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
         <div className="mp-dialog-head">
-          <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
+          <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : onBack} />
+          {onClose ? (
+            <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          ) : null}
         </div>
         <div className="mp-dialog-body">{form}</div>
         {actions}

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link2, Paperclip, Upload, X } from 'lucide-react';
 import { sampleForFile } from './samples.js';
+import ParseSetup from './ParseSetup.jsx';
 import './reference-flow.css';
 
 function isCad(file) {
@@ -13,11 +14,31 @@ function bareName(fileName) {
   return fileName.replace(/\.(step|stp|iges|igs|stl|obj)(\.gz)?$/i, '');
 }
 
-export default function ReferenceCreate({ creator, onClose, onCreate, presetCad = '', embedded = false, cadLibrary = [] }) {
+export default function ReferenceCreate({
+  creator, onClose, onCreate, presetCad = '', embedded = false, cadLibrary = [], setupInUpload = false,
+}) {
   const [cadFile, setCadFile] = useState(null);
   const [linkedId, setLinkedId] = useState('');
   const [cadHot, setCadHot] = useState(false);
   const [name, setName] = useState('');
+  const [step, setStep] = useState('cad');
+  const open = Boolean(creator);
+
+  // AI workflow 5: Enter on the CAD step moves on to document setup.
+  useEffect(() => {
+    if (!open || !setupInUpload || step !== 'cad') return undefined;
+    const onKey = (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      setStep('setup');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setupInUpload, step]);
+
+  useEffect(() => {
+    if (!open) setStep('cad');
+  }, [open]);
 
   if (!creator) return null;
 
@@ -31,14 +52,15 @@ export default function ReferenceCreate({ creator, onClose, onCreate, presetCad 
     setName((current) => current || bareName(file.name));
   };
 
-  const create = () => {
+  const create = (setup) => {
     onCreate({
+      ...(setup ? { setup } : {}),
       sampleId: sampleForFile(cadName),
       title: name.trim() || bareName(cadName) || 'Untitled Document',
       sourceName: '',
       cadName,
       origin: 'cad',
-      templateId: 'work_instruction',
+      templateId: setup?.templateId || 'work_instruction',
       adjustments: { pictures: true, table: true, callouts: true, note: '' },
     });
   };
@@ -107,11 +129,41 @@ export default function ReferenceCreate({ creator, onClose, onCreate, presetCad 
   const actions = (
     <div className="rf-actions">
       <span />
-      <button type="button" className="rf-next" onClick={create}>
-        Create Document
-      </button>
+      {setupInUpload ? (
+        <button type="button" className="rf-next" onClick={() => setStep('setup')}>
+          Next
+        </button>
+      ) : (
+        <button type="button" className="rf-next" onClick={() => create()}>
+          Create Document
+        </button>
+      )}
     </div>
   );
+
+  if (setupInUpload && step === 'setup') {
+    const setup = (
+      <ParseSetup
+        embedded
+        onBack={() => setStep('cad')}
+        onDone={(detail) => create(detail)}
+      />
+    );
+    if (embedded) return setup;
+    return (
+      <div className="mp-overlay" role="presentation">
+        <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-label="Create New Document">
+          <div className="mp-dialog-head">
+            <span className="rf-step">{`Step 2 of 2 · ${cadName}`}</span>
+            <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="mp-dialog-body">{setup}</div>
+        </div>
+      </div>
+    );
+  }
 
   if (embedded) {
     return (
