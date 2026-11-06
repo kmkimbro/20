@@ -286,3 +286,17 @@
 
 .ap-backdrop .row-actions button:hover,
 .ap-backdrop .row-actions button:focus-visible { background: #e0e4ff; }
+
+/* AI workflow 5: the plan is the next step of the create modal, so it swaps in without the open animation. */
+.ap-backdrop.is-step,
+.ap-backdrop.is-step .dialog {
+  transition: none;
+}
+
+.ap-backdrop.is-step {
+  backdrop-filter: none;
+}
+
+.ap-backdrop.is-step .dialog {
+  width: min(640px, calc(100vw - 48px));
+}

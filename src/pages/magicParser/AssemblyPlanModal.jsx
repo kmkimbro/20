@@ -244,8 +244,10 @@ function PlanNode({ node, nodeKey, collapsed, onToggle, hovered }) {
   );
 }
 
-export default function AssemblyPlanModal({ onClose, onAccept }) {
-  const [shown, setShown] = useState(false);
+export default function AssemblyPlanModal({
+  onClose, onAccept, asStep = false, onDismiss = null,
+}) {
+  const [shown, setShown] = useState(asStep);
   const [checked, setChecked] = useState(() => PLAN.map(() => true));
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [hovered, setHovered] = useState(null);
@@ -272,7 +274,7 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
   const finish = (scope) => {
     if (closing.current) return;
     closing.current = true;
-    setShown(false);
+    if (!asStep) setShown(false);
     setHovered(null);
     window.setTimeout(() => {
       if (scope) {
@@ -284,14 +286,19 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
         })), scope);
       }
       onClose();
-    }, 160);
+    }, asStep ? 0 : 160);
+  };
+
+  const dismiss = () => {
+    if (onDismiss) onDismiss();
+    else finish(null);
   };
 
   useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        finish(null);
+        dismiss();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -320,9 +327,9 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
   return createPortal(
     <div
       ref={backdropRef}
-      className={`ap-backdrop${shown ? ' is-open' : ''}`}
+      className={`ap-backdrop${shown ? ' is-open' : ''}${asStep ? ' is-step' : ''}`}
       onClick={(event) => {
-        if (event.target === backdropRef.current) finish(null);
+        if (event.target === backdropRef.current) dismiss();
       }}
     >
       <div
@@ -339,7 +346,7 @@ export default function AssemblyPlanModal({ onClose, onAccept }) {
           </button>
           <h2 id="plan-title">Assembly plan</h2>
           <span className="draft-pill">Generated draft</span>
-          <button ref={closeBtn} type="button" className="close-btn" aria-label="Close" onClick={() => finish(null)}>×</button>
+          <button ref={closeBtn} type="button" className="close-btn" aria-label="Close" onClick={dismiss}>×</button>
         </div>
         <div
           className="steps"

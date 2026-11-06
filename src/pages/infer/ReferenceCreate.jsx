@@ -142,27 +142,15 @@ export default function ReferenceCreate({
   );
 
   if (setupInUpload && step === 'setup') {
-    const setup = (
+    return (
       <ParseSetup
-        embedded
+        embedded={embedded}
         cadTypes
+        eyebrow={cadName}
         onBack={() => setStep('cad')}
+        onClose={onClose}
         onDone={(detail) => create(detail)}
       />
-    );
-    if (embedded) return setup;
-    return (
-      <div className="mp-overlay" role="presentation">
-        <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-label="Create New Document">
-          <div className="mp-dialog-head">
-            <span className="rf-step">{`Step 2 of 2 · ${cadName}`}</span>
-            <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
-          <div className="mp-dialog-body">{setup}</div>
-        </div>
-      </div>
     );
   }
 

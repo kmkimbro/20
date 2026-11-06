@@ -33,7 +33,7 @@ const EXTRACT = [
 ];
 
 export default function ParseSetup({
-  onDone, embedded = false, onBack = null, onClose = null, initial = null, cadTypes = false,
+  onDone, embedded = false, onBack = null, onClose = null, initial = null, cadTypes = false, eyebrow = '',
 }) {
   const docTypes = cadTypes ? CAD_DOC_TYPES : DOC_TYPES;
   const [step, setStep] = useState('type');
@@ -106,6 +106,7 @@ export default function ParseSetup({
             ))}
           </div>
           <SelectAll
+            custom={cadTypes}
             checked={picks.length === EXTRACT.length}
             indeterminate={picks.length > 0 && picks.length < EXTRACT.length}
             onChange={() => setPicks((current) => (
@@ -142,8 +143,14 @@ export default function ParseSetup({
     </div>
   );
 
+  // AI workflow 5 (cadTypes): the plan replaces this modal as its next step instead of opening on top.
   const plan = planOpen ? (
-    <AssemblyPlanModal onClose={() => setPlanOpen(false)} onAccept={acceptPlan} />
+    <AssemblyPlanModal
+      asStep={cadTypes}
+      onDismiss={cadTypes ? onClose : null}
+      onClose={() => setPlanOpen(false)}
+      onAccept={acceptPlan}
+    />
   ) : null;
 
   if (planOpen && !embedded) return plan;
@@ -160,8 +167,9 @@ export default function ParseSetup({
 
   return (
     <div className="mp-overlay lb-parse-modal" role="presentation">
-      <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
-        <div className="mp-dialog-head">
+      <div className={`mp-dialog rf-dialog${cadTypes ? ' is-cad' : ''}`} role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
+        <div className={`mp-dialog-head${eyebrow ? ' rf-head-eyebrow' : ''}`}>
+          {eyebrow ? <span className="rf-eyebrow">{eyebrow}</span> : null}
           <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : onBack} />
           {onClose ? (
             <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose}>
@@ -189,7 +197,9 @@ function TitleRow({ title, onBack, id }) {
   );
 }
 
-function SelectAll({ checked, indeterminate, onChange }) {
+function SelectAll({
+  checked, indeterminate, onChange, custom = false,
+}) {
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -197,8 +207,14 @@ function SelectAll({ checked, indeterminate, onChange }) {
   }, [indeterminate]);
 
   return (
-    <label className="rf-select-all">
+    <label className={`rf-select-all${custom ? ' is-custom' : ''}`}>
       <input ref={inputRef} type="checkbox" checked={checked} onChange={onChange} />
+      {custom ? (
+      <span className={`rf-check${checked ? ' is-on' : ''}${indeterminate ? ' is-mixed' : ''}`} aria-hidden="true">
+        {checked ? <Check size={12} strokeWidth={3} /> : null}
+        {indeterminate ? <span className="rf-check-dash" /> : null}
+      </span>
+      ) : null}
       Select all
     </label>
   );
