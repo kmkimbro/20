@@ -29,7 +29,9 @@ const INSTANCES = [
   'Piston Assembly',
 ];
 
-export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = false, onUseCad, parseSetup = false }) {
+export default function OnshapeWorkspace({
+  onOpenDocument, referenceCreate = false, onUseCad, parseSetup = false, cadTypes = false,
+}) {
   const [cadName, setCadName] = useState('');
   const [allowNew, setAllowNew] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -86,6 +88,7 @@ export default function OnshapeWorkspace({ onOpenDocument, referenceCreate = fal
               <p className="os-file">{detailTitle}</p>
               <ParseSetup
                 embedded
+                cadTypes={cadTypes}
                 onDone={(detail) => onOpenDocument({
                   title: detailTitle,
                   cadName,

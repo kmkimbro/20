@@ -145,6 +145,7 @@ export default function ReferenceCreate({
     const setup = (
       <ParseSetup
         embedded
+        cadTypes
         onBack={() => setStep('cad')}
         onDone={(detail) => create(detail)}
       />

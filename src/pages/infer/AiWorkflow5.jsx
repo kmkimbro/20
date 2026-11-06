@@ -33,7 +33,7 @@ export default function AiWorkflow5() {
   }
 
   if (source === 'onshape') {
-    return <OnshapeWorkspace parseSetup onOpenDocument={setPending} />;
+    return <OnshapeWorkspace parseSetup cadTypes onOpenDocument={setPending} />;
   }
 
   return (

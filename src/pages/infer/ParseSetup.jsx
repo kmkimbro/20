@@ -14,6 +14,15 @@ const DOC_TYPES = [
   { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
 ];
 
+// AI workflow 5: each tile is a way to make the document from the CAD, not a template.
+const CAD_DOC_TYPES = [
+  { id: 'blank', label: 'Blank document', detail: 'Start empty and add the content yourself.', icon: File },
+  { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
+  { id: 'auto_assembly', label: 'Auto Assembly', detail: 'We will generate preliminary operations for you.', icon: Layers },
+  { id: 'parts_list', label: 'Parts list', detail: 'Generate a parts list document straight from your CAD.', icon: Hexagon },
+  { id: 'work_instruction', label: 'Work instruction', detail: 'Generate a work instruction document from your CAD.', icon: ClipboardList },
+];
+
 const EXTRACT = [
   { id: 'Operations', label: 'Operations', detail: 'Steps from the document.', icon: ListOrdered },
   { id: 'Images', label: 'Images', detail: 'Pictures from the model.', icon: Camera },
@@ -24,8 +33,9 @@ const EXTRACT = [
 ];
 
 export default function ParseSetup({
-  onDone, embedded = false, onBack = null, onClose = null, initial = null,
+  onDone, embedded = false, onBack = null, onClose = null, initial = null, cadTypes = false,
 }) {
+  const docTypes = cadTypes ? CAD_DOC_TYPES : DOC_TYPES;
   const [step, setStep] = useState('type');
   const [docType, setDocType] = useState(initial?.docType || null);
   const [picks, setPicks] = useState(initial?.picks || []);
@@ -33,7 +43,7 @@ export default function ParseSetup({
 
   const title = step === 'extract'
     ? 'What do you want to import?'
-    : 'What kind of document do you want to create?';
+    : (cadTypes ? 'How do you want to make this document?' : 'What kind of document do you want to create?');
 
   const chooseType = (id) => {
     setDocType(id);
@@ -105,7 +115,7 @@ export default function ParseSetup({
         </>
       ) : (
         <div className="rf-choices">
-          {DOC_TYPES.map((item) => (
+          {docTypes.map((item) => (
             <button
               key={item.id}
               type="button"

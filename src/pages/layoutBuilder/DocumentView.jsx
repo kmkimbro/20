@@ -1079,6 +1079,7 @@ export default function DocumentView({
       {setupInUpload && setupOpen ? (
         <ParseSetup
           key={`${doc.id}-setup`}
+          cadTypes
           initial={{ docType: doc.parseDocType, picks: doc.parsePicks }}
           onClose={() => setSetupOpen(false)}
           onDone={(detail) => {
