@@ -245,7 +245,7 @@ function PlanNode({ node, nodeKey, collapsed, onToggle, hovered }) {
 }
 
 export default function AssemblyPlanModal({
-  onClose, onAccept, asStep = false, onDismiss = null,
+  onClose, onAccept, asStep = false, onDismiss = null, eyebrow = '',
 }) {
   const [shown, setShown] = useState(asStep);
   const [checked, setChecked] = useState(() => PLAN.map(() => true));
@@ -340,7 +340,8 @@ export default function AssemblyPlanModal({
         aria-labelledby="plan-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="plan-head">
+        <div className={`plan-head${eyebrow ? ' has-eyebrow' : ''}`}>
+          {eyebrow ? <span className="plan-eyebrow">{eyebrow}</span> : null}
           <button type="button" className="plan-title-back" aria-label="Back" onClick={() => finish(null)}>
             <ChevronLeft size={18} />
           </button>

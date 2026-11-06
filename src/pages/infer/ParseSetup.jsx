@@ -147,6 +147,7 @@ export default function ParseSetup({
   const plan = planOpen ? (
     <AssemblyPlanModal
       asStep={cadTypes}
+      eyebrow={eyebrow}
       onDismiss={cadTypes ? onClose : null}
       onClose={() => setPlanOpen(false)}
       onAccept={acceptPlan}
