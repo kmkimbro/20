@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   BookOpen, History, ClipboardList, FileText, ChevronRight, LayoutTemplate,
   Circle, MessageSquare, Pencil, ChevronDown, Check, Upload, Box, Plus,
-  Camera, Type, Table, ArrowUpRight, Users, Star, Send,
+  Camera, Type, Table, ArrowUpRight, Users, Star, Send, SlidersHorizontal,
 } from 'lucide-react';
 import Header from '../../components/Header.jsx';
 import CadView from '../../components/CadView.jsx';
@@ -680,8 +680,10 @@ export default function DocumentView({
   cadParsing = false,
   onCadParsed,
   parseSetup = false,
+  setupInUpload = false,
 }) {
   const [nav, setNav] = useState('doc');
+  const [setupOpen, setSetupOpen] = useState(false);
   const [promptsOpen, setPromptsOpen] = useState(false);
   const [promptTarget, setPromptTarget] = useState(null);
   const [askHistory, setAskHistory] = useState([]);
@@ -810,6 +812,16 @@ export default function DocumentView({
         <div className="lb-doc">
           <aside className="lb-doc-tree">
             <div className="lb-tree-title">{doc.name}</div>
+            {setupInUpload ? (
+              <button
+                type="button"
+                className={`lb-tree-item${setupOpen ? ' is-active' : ''}`}
+                onClick={() => setSetupOpen(true)}
+              >
+                <SlidersHorizontal size={14} />
+                Document setup
+              </button>
+            ) : null}
             {generated ? (
               <>
                 {source ? (
@@ -1058,10 +1070,22 @@ export default function DocumentView({
           ) : null}
         </div>
       )}
-      {parseSetup && !doc.optionsSaved ? (
+      {parseSetup && !doc.optionsSaved && !setupInUpload ? (
         <ParseSetup
           key={doc.id}
           onDone={(detail) => onCadParsed?.(detail)}
+        />
+      ) : null}
+      {setupInUpload && setupOpen ? (
+        <ParseSetup
+          key={`${doc.id}-setup`}
+          cadTypes
+          initial={{ docType: doc.parseDocType, picks: doc.parsePicks }}
+          onClose={() => setSetupOpen(false)}
+          onDone={(detail) => {
+            setSetupOpen(false);
+            onCadParsed?.(detail);
+          }}
         />
       ) : null}
       {cadParsing && !parseSetup ? (

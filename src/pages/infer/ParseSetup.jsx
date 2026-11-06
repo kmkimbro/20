@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Camera, Check, ChevronLeft, ClipboardList, File, Hexagon, Layers, ListOrdered, MessageSquare, PenLine, Sparkles, Table, Type,
+  Camera, Check, ChevronLeft, ClipboardList, File, Hexagon, Layers, ListOrdered, MessageSquare, PenLine, Sparkles, Table, Type, X,
 } from 'lucide-react';
 import AssemblyPlanModal from '../magicParser/AssemblyPlanModal.jsx';
 import './reference-flow.css';
@@ -14,6 +14,15 @@ const DOC_TYPES = [
   { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
 ];
 
+// AI workflow 5: each tile is a way to make the document from the CAD, not a template.
+const CAD_DOC_TYPES = [
+  { id: 'blank', label: 'Blank document', detail: 'Start empty and add the content yourself.', icon: File },
+  { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
+  { id: 'auto_assembly', label: 'Auto Assembly', detail: 'We will suggest an assembly plan once your CAD is read.', icon: Layers },
+  { id: 'parts_list', label: 'Parts list', detail: 'Generate a parts list document straight from your CAD.', icon: Hexagon },
+  { id: 'work_instruction', label: 'Work instruction', detail: 'Generate a work instruction document from your CAD.', icon: ClipboardList },
+];
+
 const EXTRACT = [
   { id: 'Operations', label: 'Operations', detail: 'Steps from the document.', icon: ListOrdered },
   { id: 'Images', label: 'Images', detail: 'Pictures from the model.', icon: Camera },
@@ -23,20 +32,26 @@ const EXTRACT = [
   { id: 'Parts', label: 'Parts', detail: 'Components in the assembly.', icon: Hexagon },
 ];
 
-export default function ParseSetup({ onDone, embedded = false }) {
+export default function ParseSetup({
+  onDone, embedded = false, onBack = null, onClose = null, initial = null, cadTypes = false, eyebrow = '',
+}) {
+  const docTypes = cadTypes ? CAD_DOC_TYPES : DOC_TYPES;
+  // AI workflow 5: the Onshape side panel is narrow, so its tiles are short rows.
+  const compact = cadTypes && embedded;
   const [step, setStep] = useState('type');
-  const [docType, setDocType] = useState(null);
-  const [picks, setPicks] = useState([]);
+  const [docType, setDocType] = useState(initial?.docType || null);
+  const [picks, setPicks] = useState(initial?.picks || []);
   const [planOpen, setPlanOpen] = useState(false);
 
   const title = step === 'extract'
     ? 'What do you want to import?'
-    : 'What kind of document do you want to create?';
+    : (cadTypes ? 'How do you want to make this document?' : 'What kind of document do you want to create?');
 
   const chooseType = (id) => {
     setDocType(id);
     if (id === 'import') setStep('extract');
-    if (id === 'auto_assembly') setPlanOpen(true);
+    // AI workflow 5: the plan waits for the CAD to be read, so the choice just finishes setup.
+    if (id === 'auto_assembly' && !cadTypes) setPlanOpen(true);
   };
 
   const finish = (plan) => onDone({
@@ -44,6 +59,7 @@ export default function ParseSetup({ onDone, embedded = false }) {
     picks: step === 'extract' ? picks : [],
     prompt: step === 'extract' ? 'Existing document' : (docType === 'auto_assembly' ? 'Auto Assembly' : 'New document'),
     sourceName: '',
+    docType,
     planSteps: plan?.planSteps,
     planScope: plan?.planScope,
   });
@@ -53,7 +69,7 @@ export default function ParseSetup({ onDone, embedded = false }) {
       setStep('extract');
       return;
     }
-    if (step === 'type' && docType === 'auto_assembly') {
+    if (step === 'type' && docType === 'auto_assembly' && !cadTypes) {
       setPlanOpen(true);
       return;
     }
@@ -70,12 +86,12 @@ export default function ParseSetup({ onDone, embedded = false }) {
   const form = (
     <>
       {embedded ? (
-        <TitleRow title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
+        <TitleRow title={title} onBack={step === 'extract' ? () => setStep('type') : onBack} />
       ) : null}
       {step === 'extract' ? (
         <>
           <p className="rf-lead">Select elements of the document that you want to convert to a Quarter20 document.</p>
-          <div className="rf-choices">
+          <div className={`rf-choices${compact ? ' is-compact' : ''}`}>
             {EXTRACT.map((item) => (
               <button
                 key={item.id}
@@ -93,6 +109,7 @@ export default function ParseSetup({ onDone, embedded = false }) {
             ))}
           </div>
           <SelectAll
+            custom={cadTypes}
             checked={picks.length === EXTRACT.length}
             indeterminate={picks.length > 0 && picks.length < EXTRACT.length}
             onChange={() => setPicks((current) => (
@@ -101,8 +118,8 @@ export default function ParseSetup({ onDone, embedded = false }) {
           />
         </>
       ) : (
-        <div className="rf-choices">
-          {DOC_TYPES.map((item) => (
+        <div className={`rf-choices${compact ? ' is-compact' : ''}`}>
+          {docTypes.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -129,8 +146,15 @@ export default function ParseSetup({ onDone, embedded = false }) {
     </div>
   );
 
+  // AI workflow 5 (cadTypes): the plan replaces this modal as its next step instead of opening on top.
   const plan = planOpen ? (
-    <AssemblyPlanModal onClose={() => setPlanOpen(false)} onAccept={acceptPlan} />
+    <AssemblyPlanModal
+      asStep={cadTypes}
+      eyebrow={eyebrow}
+      onDismiss={cadTypes ? onClose : null}
+      onClose={() => setPlanOpen(false)}
+      onAccept={acceptPlan}
+    />
   ) : null;
 
   if (planOpen && !embedded) return plan;
@@ -147,9 +171,15 @@ export default function ParseSetup({ onDone, embedded = false }) {
 
   return (
     <div className="mp-overlay lb-parse-modal" role="presentation">
-      <div className="mp-dialog rf-dialog" role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
-        <div className="mp-dialog-head">
-          <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : null} />
+      <div className={`mp-dialog rf-dialog${cadTypes ? ' is-cad' : ''}`} role="dialog" aria-modal="true" aria-labelledby="lb-parse-ask-title">
+        <div className={`mp-dialog-head${eyebrow ? ' rf-head-eyebrow' : ''}`}>
+          {eyebrow ? <span className="rf-eyebrow">{eyebrow}</span> : null}
+          <TitleRow id="lb-parse-ask-title" title={title} onBack={step === 'extract' ? () => setStep('type') : onBack} />
+          {onClose ? (
+            <button type="button" className="mp-dialog-x" aria-label="Close" onClick={onClose}>
+              <X size={18} />
+            </button>
+          ) : null}
         </div>
         <div className="mp-dialog-body">{form}</div>
         {actions}
@@ -171,7 +201,9 @@ function TitleRow({ title, onBack, id }) {
   );
 }
 
-function SelectAll({ checked, indeterminate, onChange }) {
+function SelectAll({
+  checked, indeterminate, onChange, custom = false,
+}) {
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -179,8 +211,14 @@ function SelectAll({ checked, indeterminate, onChange }) {
   }, [indeterminate]);
 
   return (
-    <label className="rf-select-all">
+    <label className={`rf-select-all${custom ? ' is-custom' : ''}`}>
       <input ref={inputRef} type="checkbox" checked={checked} onChange={onChange} />
+      {custom ? (
+      <span className={`rf-check${checked ? ' is-on' : ''}${indeterminate ? ' is-mixed' : ''}`} aria-hidden="true">
+        {checked ? <Check size={12} strokeWidth={3} /> : null}
+        {indeterminate ? <span className="rf-check-dash" /> : null}
+      </span>
+      ) : null}
       Select all
     </label>
   );

@@ -237,11 +237,82 @@
   cursor: pointer;
 }
 
-.rf-select-all input {
-  width: 16px;
-  height: 16px;
+.rf-select-all.is-custom {
+  align-self: flex-start;
+  margin-top: 18px;
+}
+
+.rf-select-all.is-custom input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   margin: 0;
-  accent-color: #4F6EF7;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rf-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1.5px solid #D1D5DB;
+  border-radius: 5px;
+  background: #fff;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.rf-check.is-on,
+.rf-check.is-mixed {
+  border-color: #4F6EF7;
+  background: #4F6EF7;
+}
+
+.rf-check-dash {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.rf-select-all.is-custom input:focus-visible + .rf-check {
+  outline: 2px solid #4F6EF7;
+  outline-offset: 2px;
+}
+
+.rf-dialog .mp-dialog-body {
+  padding-bottom: 8px;
+}
+
+.rf-dialog.is-cad .mp-dialog-body {
+  padding-bottom: 20px;
+}
+
+.mp-dialog-head.rf-head-eyebrow {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.mp-dialog-head.rf-head-eyebrow .rf-eyebrow {
+  flex-basis: calc(100% - 40px);
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mp-dialog-head.rf-head-eyebrow .mp-dialog-x {
+  order: 1;
+  margin-left: auto;
+}
+
+.mp-dialog-head.rf-head-eyebrow .rf-title-row {
+  order: 2;
+  flex-basis: 100%;
 }
 
 .rf-actions {
@@ -252,9 +323,7 @@
   margin-top: 20px;
 }
 
-.rf-dialog .mp-dialog-body {
-  padding-bottom: 8px;
-}
+
 
 .rf-dialog .rf-actions {
   margin-top: 0;
@@ -294,4 +363,52 @@
 
 @media (max-width: 640px) {
   .rf-choices { grid-template-columns: 1fr; }
+}
+
+/* AI workflow 5, Onshape panel: compact rows (icon left, title and one-line description beside it). */
+.rf-choices.is-compact {
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.rf-choices.is-compact button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-areas:
+    "icon title"
+    "icon detail";
+  column-gap: 10px;
+  row-gap: 1px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.rf-choices.is-compact .rf-tile-icon {
+  grid-area: icon;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border-radius: 6px;
+}
+
+.rf-choices.is-compact .rf-tile-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.rf-choices.is-compact button strong {
+  grid-area: title;
+  font-size: 13px;
+}
+
+.rf-choices.is-compact button span:not(.rf-tile-icon) {
+  grid-area: detail;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.rf-choices.is-compact + .rf-select-all {
+  margin-top: 12px;
 }

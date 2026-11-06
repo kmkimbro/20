@@ -16,6 +16,7 @@ import AssemblyMap from './pages/AssemblyMap.jsx';
 import LayoutBuilder from './pages/LayoutBuilder.jsx';
 import AiWorkflowStart from './pages/infer/AiWorkflowStart.jsx';
 import ReferenceFlow from './pages/infer/ReferenceFlow.jsx';
+import AiWorkflow5 from './pages/infer/AiWorkflow5.jsx';
 import MegadocumentEmptyState from './pages/MegadocumentEmptyState.jsx';
 import App from './App.jsx';
 import '../styles.css';
@@ -120,6 +121,7 @@ ReactDOM.createRoot(rootEl).render(
               <Route path="/prototype/infer-document" element={<LayoutBuilder storageKey="q20_infer_document_v1" inferDocument />} />
               <Route path="/prototype/ai-workflow-3" element={<AiWorkflowStart />} />
               <Route path="/prototype/ai-workflow-4" element={<ReferenceFlow />} />
+              <Route path="/prototype/ai-workflow-5" element={<AiWorkflow5 />} />
               <Route path="/prototype/megadocument-empty" element={<MegadocumentEmptyState />} />
               <Route
                 path="/prototype/tool-library-mid-fi"
