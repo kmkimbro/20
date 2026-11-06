@@ -182,6 +182,13 @@ export const PROTOTYPES = [
     path: '/prototype/ai-workflow-4',
   },
   {
+    id: 'ai-workflow-5',
+    title: 'AI workflow 5',
+    description:
+      'Copy of AI workflow 4 for iteration. Start from Onshape/SolidWorks or from Quarter20. Own saved state (separate from AI workflow 4).',
+    path: '/prototype/ai-workflow-5',
+  },
+  {
     id: 'assembly-plan',
     title: 'Assembly plan',
     description:
