@@ -36,6 +36,8 @@ export default function ParseSetup({
   onDone, embedded = false, onBack = null, onClose = null, initial = null, cadTypes = false, eyebrow = '',
 }) {
   const docTypes = cadTypes ? CAD_DOC_TYPES : DOC_TYPES;
+  // AI workflow 5: the Onshape side panel is narrow, so its tiles are short rows.
+  const compact = cadTypes && embedded;
   const [step, setStep] = useState('type');
   const [docType, setDocType] = useState(initial?.docType || null);
   const [picks, setPicks] = useState(initial?.picks || []);
@@ -89,7 +91,7 @@ export default function ParseSetup({
       {step === 'extract' ? (
         <>
           <p className="rf-lead">Select elements of the document that you want to convert to a Quarter20 document.</p>
-          <div className="rf-choices">
+          <div className={`rf-choices${compact ? ' is-compact' : ''}`}>
             {EXTRACT.map((item) => (
               <button
                 key={item.id}
@@ -116,7 +118,7 @@ export default function ParseSetup({
           />
         </>
       ) : (
-        <div className="rf-choices">
+        <div className={`rf-choices${compact ? ' is-compact' : ''}`}>
           {docTypes.map((item) => (
             <button
               key={item.id}
