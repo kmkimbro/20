@@ -5,6 +5,7 @@ import PrototypeProvider from './contexts/PrototypeProvider.jsx';
 import ViewModeProvider, { ViewModeRoot } from './contexts/ViewModeContext.jsx';
 import PrototypeDocumentTitle from './components/PrototypeDocumentTitle.jsx';
 import PrototypeGallery from './pages/PrototypeGallery.jsx';
+import DesignSystem from './pages/DesignSystem.jsx';
 import { EDITOR_ONLY_PROTOTYPE_IDS } from './config/prototypes.js';
 import ProjectHome from './pages/ProjectHome.jsx';
 import Des36DocumentConnection from './pages/Des36DocumentConnection.jsx';
@@ -91,6 +92,7 @@ ReactDOM.createRoot(rootEl).render(
             <Routes>
               <Route path="/" element={<Navigate to="/prototype" replace />} />
               <Route path="/prototype" element={<PrototypeGallery />} />
+              <Route path="/prototype/design-system" element={<DesignSystem />} />
               <Route path="/prototype/des-36" element={<ProjectHome allowDeleteProjectsAndDocuments prdOnboarding />} />
               <Route
                 path="/prototype/des-36-v2"

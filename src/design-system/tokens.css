@@ -1,0 +1,105 @@
+/*
+ * Quarter20 prototype design tokens.
+ *
+ * These values are the ones the prototypes already use most (audited across
+ * styles.css and the per-feature CSS). They are namespaced with --q20- so they
+ * never collide with the older variables in styles.css. Defining them changes
+ * nothing on screen; a screen only changes when it starts using them.
+ *
+ * Keep tokens.js in sync when you change a value here.
+ */
+:root {
+  /* ---- Brand / primary ---- */
+  --q20-color-primary: #4F6EF7;
+  --q20-color-primary-hover: #3E5BE0;
+  --q20-color-primary-deep: #223EB5;
+  --q20-color-primary-subtle: #EEF1FE;
+  --q20-color-primary-border: #C7D2FE;
+  --q20-color-nav: #5884E7;
+
+  /* ---- Text ---- */
+  --q20-color-text: #111827;
+  --q20-color-text-secondary: #374151;
+  --q20-color-text-lead: #4B5563;
+  --q20-color-text-muted: #6B7280;
+  --q20-color-text-subtle: #9CA3AF;
+  --q20-color-text-inverse: #FFFFFF;
+
+  /* ---- Surfaces ---- */
+  --q20-color-surface: #FFFFFF;
+  --q20-color-surface-subtle: #F9FAFB;
+  --q20-color-surface-hover: #F3F4F6;
+  --q20-color-page: #F0F2F7;
+  --q20-color-overlay: rgba(17, 24, 39, 0.45);
+
+  /* ---- Borders ---- */
+  --q20-color-border: #E5E7EB;
+  --q20-color-border-strong: #D1D5DB;
+
+  /* ---- Status ---- */
+  --q20-color-danger: #DC2626;
+  --q20-color-danger-subtle: #FEF2F2;
+  --q20-color-danger-border: #FECACA;
+  --q20-color-success: #047857;
+  --q20-color-success-subtle: #ECFDF5;
+  --q20-color-warning: #92400E;
+  --q20-color-warning-subtle: #FEF3C7;
+  --q20-color-warning-border: #FDE68A;
+
+  /* ---- Typography ---- */
+  --q20-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --q20-font-size-2xs: 11px;
+  --q20-font-size-xs: 12px;
+  --q20-font-size-sm: 13px;
+  --q20-font-size-md: 14px;
+  --q20-font-size-lg: 16px;
+  --q20-font-size-xl: 18px;
+  --q20-font-size-2xl: 22px;
+  --q20-font-weight-regular: 400;
+  --q20-font-weight-medium: 500;
+  --q20-font-weight-semibold: 600;
+  --q20-font-weight-strong: 650;
+  --q20-font-weight-bold: 700;
+  --q20-line-height-tight: 1.2;
+  --q20-line-height-normal: 1.45;
+  --q20-letter-spacing-title: -0.02em;
+  --q20-letter-spacing-eyebrow: 0.04em;
+
+  /* ---- Spacing (4px base) ---- */
+  --q20-space-1: 4px;
+  --q20-space-1-5: 6px;
+  --q20-space-2: 8px;
+  --q20-space-2-5: 10px;
+  --q20-space-3: 12px;
+  --q20-space-3-5: 14px;
+  --q20-space-4: 16px;
+  --q20-space-4-5: 18px;
+  --q20-space-5: 20px;
+  --q20-space-5-5: 22px;
+  --q20-space-6: 24px;
+  --q20-space-8: 32px;
+
+  /* ---- Radius ---- */
+  --q20-radius-xs: 4px;
+  --q20-radius-sm: 6px;
+  --q20-radius-md: 8px;
+  --q20-radius-lg: 10px;
+  --q20-radius-xl: 12px;
+  --q20-radius-pill: 999px;
+
+  /* ---- Shadows ---- */
+  --q20-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --q20-shadow-card: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --q20-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --q20-shadow-modal: 0 20px 50px rgba(15, 23, 42, 0.16);
+  --q20-focus-ring: 0 0 0 3px rgba(79, 110, 247, 0.15);
+
+  /* ---- Layout ---- */
+  --q20-topnav-height: 52px;
+  --q20-toolbar-height: 48px;
+  --q20-sidebar-width: 240px;
+  --q20-modal-width: 480px;
+  --q20-modal-width-md: 640px;
+  --q20-modal-width-lg: 720px;
+  --q20-z-overlay: 80;
+}
