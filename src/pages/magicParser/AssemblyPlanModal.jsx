@@ -245,7 +245,7 @@ function PlanNode({ node, nodeKey, collapsed, onToggle, hovered }) {
 }
 
 export default function AssemblyPlanModal({
-  onClose, onAccept, asStep = false, onDismiss = null, eyebrow = '',
+  onClose, onAccept, asStep = false, onDismiss = null, eyebrow = '', hideBack = false,
 }) {
   const [shown, setShown] = useState(asStep);
   const [checked, setChecked] = useState(() => PLAN.map(() => true));
@@ -342,9 +342,11 @@ export default function AssemblyPlanModal({
       >
         <div className={`plan-head${eyebrow ? ' has-eyebrow' : ''}`}>
           {eyebrow ? <span className="plan-eyebrow">{eyebrow}</span> : null}
-          <button type="button" className="plan-title-back" aria-label="Back" onClick={() => finish(null)}>
-            <ChevronLeft size={18} />
-          </button>
+          {hideBack ? null : (
+            <button type="button" className="plan-title-back" aria-label="Back" onClick={() => finish(null)}>
+              <ChevronLeft size={18} />
+            </button>
+          )}
           <h2 id="plan-title">Assembly plan</h2>
           <span className="draft-pill">Generated draft</span>
           <button ref={closeBtn} type="button" className="close-btn" aria-label="Close" onClick={dismiss}>×</button>

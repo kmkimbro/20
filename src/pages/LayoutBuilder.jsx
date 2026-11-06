@@ -435,6 +435,7 @@ export default function LayoutBuilder({
         optionsSaved: true,
         parsePicks: draft.setup.picks || [],
         parseDocType: draft.setup.docType || null,
+        planPending: draft.setup.docType === 'auto_assembly',
         ...(draft.setup.planSteps ? { planSteps: draft.setup.planSteps } : {}),
         ...(draft.setup.planScope ? { planScope: draft.setup.planScope } : {}),
       } : {}),
@@ -469,6 +470,7 @@ export default function LayoutBuilder({
             cadParsing: true,
             parsePicks: detail?.picks || [],
             ...(detail?.docType ? { parseDocType: detail.docType } : {}),
+            ...(setupInUpload ? { planPending: detail?.docType === 'auto_assembly' && !detail?.planSteps } : {}),
             ...(detail?.templateId ? { templateId: detail.templateId } : {}),
             ...(detail?.sourceName ? { sourceName: detail.sourceName } : {}),
             ...(detail?.planSteps ? { planSteps: detail.planSteps, planAccepted: true } : {}),
@@ -508,6 +510,39 @@ export default function LayoutBuilder({
     [state.layouts, state.docState],
   );
 
+  // AI workflow 5: Auto Assembly needs the parsed CAD, so its plan opens once parsing finishes.
+  const autoPlanDoc = setupInUpload
+    ? state.documents.find((doc) => doc.planPending && !doc.cadParsing)
+    : null;
+  const autoPlan = autoPlanDoc ? (
+    <AssemblyPlanModal
+      key={autoPlanDoc.id}
+      asStep
+      hideBack
+      eyebrow={autoPlanDoc.cadFileLabel || autoPlanDoc.name}
+      onClose={() => update((prev) => ({
+        ...prev,
+        documents: prev.documents.map((doc) => (
+          doc.id === autoPlanDoc.id ? { ...doc, planPending: false } : doc
+        )),
+      }))}
+      onAccept={(steps, scope) => {
+        const kept = steps.filter((step) => step.checked);
+        update((prev) => ({
+          ...prev,
+          documents: prev.documents.map((doc) => (
+            doc.id === autoPlanDoc.id
+              ? {
+                ...doc, planPending: false, planAccepted: true, planScope: scope, planSteps: kept,
+              }
+              : doc
+          )),
+        }));
+        openDoc(autoPlanDoc.id);
+      }}
+    />
+  ) : null;
+
   const planModal = planDocId && activeDoc?.id === planDocId ? (
     <AssemblyPlanModal
       onClose={() => setPlanDocId(null)}
@@ -534,6 +569,7 @@ export default function LayoutBuilder({
           onBack={() => { setView('home'); setActiveDocId(null); }}
         />
         {planModal}
+        {autoPlan}
         <PrototypeSwitcher />
       </>
     );
@@ -559,6 +595,7 @@ export default function LayoutBuilder({
           onBack={() => { setView('home'); setActiveDocId(null); }}
         />
         {planModal}
+        {autoPlan}
         <PrototypeSwitcher />
       </>
     );
@@ -597,6 +634,7 @@ export default function LayoutBuilder({
           awaitingPlan={assemblyPlan && activeDoc.cadLinked && !activeDoc.planAccepted}
         />
         {planModal}
+        {autoPlan}
         {editor && (
           <LayoutEditor
             initial={editor.layout}
@@ -905,6 +943,7 @@ export default function LayoutBuilder({
           onClose={() => setEditor(null)}
         />
       )}
+      {autoPlan}
       {referenceFlow ? (
         <ReferenceCreate
           creator={importer}

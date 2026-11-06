@@ -18,7 +18,7 @@ const DOC_TYPES = [
 const CAD_DOC_TYPES = [
   { id: 'blank', label: 'Blank document', detail: 'Start empty and add the content yourself.', icon: File },
   { id: 'import', label: 'Import', detail: 'Upload your own document and make a Quarter20 document.', icon: Sparkles, magic: true },
-  { id: 'auto_assembly', label: 'Auto Assembly', detail: 'We will generate preliminary operations for you.', icon: Layers },
+  { id: 'auto_assembly', label: 'Auto Assembly', detail: 'We will suggest an assembly plan once your CAD is read.', icon: Layers },
   { id: 'parts_list', label: 'Parts list', detail: 'Generate a parts list document straight from your CAD.', icon: Hexagon },
   { id: 'work_instruction', label: 'Work instruction', detail: 'Generate a work instruction document from your CAD.', icon: ClipboardList },
 ];
@@ -48,7 +48,8 @@ export default function ParseSetup({
   const chooseType = (id) => {
     setDocType(id);
     if (id === 'import') setStep('extract');
-    if (id === 'auto_assembly') setPlanOpen(true);
+    // AI workflow 5: the plan waits for the CAD to be read, so the choice just finishes setup.
+    if (id === 'auto_assembly' && !cadTypes) setPlanOpen(true);
   };
 
   const finish = (plan) => onDone({
@@ -66,7 +67,7 @@ export default function ParseSetup({
       setStep('extract');
       return;
     }
-    if (step === 'type' && docType === 'auto_assembly') {
+    if (step === 'type' && docType === 'auto_assembly' && !cadTypes) {
       setPlanOpen(true);
       return;
     }
