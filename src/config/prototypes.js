@@ -189,6 +189,14 @@ export const PROTOTYPES = [
     path: '/prototype/ai-workflow-5',
   },
   {
+    id: 'ai-workflow-5-flow',
+    title: 'AI workflow 5 flow',
+    description:
+      'Flow diagram of AI workflow 5: every screen from upload to document for each way of making a document, plus the Onshape path. Pan, zoom, and click a screen to enlarge it.',
+    path: '/flows/ai-workflow-5/index.html',
+    file: true,
+  },
+  {
     id: 'assembly-plan',
     title: 'Assembly plan',
     description:
