@@ -41,19 +41,6 @@ function DocTile({ doc, project, onOpen }) {
   );
 }
 
-function EmptyDocs({ onCreate }) {
-  return (
-    <div className="lb-empty aw6-home-empty">
-      <div className="lb-empty-icon"><FileText size={18} /></div>
-      <h3>No documents yet</h3>
-      <p>A document is built on a CAD model. Start a blank one, or import a work instruction you already have.</p>
-      <button type="button" className="lb-btn-primary" onClick={onCreate}>
-        <Plus size={14} /> New document
-      </button>
-    </div>
-  );
-}
-
 export default function AiWorkflow6() {
   const [state, setState] = useState(() => {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset')) resetState();
@@ -209,11 +196,9 @@ export default function AiWorkflow6() {
             <div className="lb-page">
               <div className="lb-page-head">
                 <h1 className="lb-page-title">{view === 'home' ? 'Home' : projectName(projectId)}</h1>
-                {(view === 'home' ? state.documents : projectDocs).length ? (
-                  <button type="button" className="lb-btn-primary" onClick={() => setCreating(true)}>
-                    <Plus size={14} /> New document
-                  </button>
-                ) : null}
+                <button type="button" className="lb-btn-primary" onClick={() => setCreating(true)}>
+                  <Plus size={14} /> New document
+                </button>
               </div>
               {view === 'home' ? <div className="lb-page-sub">Recent documents</div> : null}
               {(view === 'home' ? state.documents : projectDocs).length ? (
@@ -223,7 +208,7 @@ export default function AiWorkflow6() {
                   ))}
                 </div>
               ) : (
-                <EmptyDocs onCreate={() => setCreating(true)} />
+                <p className="aw6-muted">No documents yet.</p>
               )}
             </div>
           ) : (
