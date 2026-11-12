@@ -306,7 +306,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   const docName = draft.name.trim() || bareName(cadName) || 'Untitled document';
   const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
 
-  const runImport = async () => {
+  const runImport = async (src = source) => {
     const run = runRef.current + 1;
     runRef.current = run;
     const alive = () => runRef.current === run;
@@ -316,9 +316,9 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
     await wait(900);
     if (!alive()) return;
     setProgress((p) => ({ ...p, stage: 1 }));
-    if (source.file) {
+    if (src.file) {
       try {
-        const { images, total } = await renderPdfPages(source.file, (n, count) => {
+        const { images, total } = await renderPdfPages(src.file, (n, count) => {
           if (alive()) setProgress((p) => ({ ...p, total: count }));
         });
         list = images.map((image) => ({ image }));
@@ -373,7 +373,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   if (step === 'cad') {
     body = <CadStep draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />;
     footer = (
-      <Button disabled={!draft.cad} onClick={() => setStep('start')}>Next</Button>
+      <Button onClick={() => setStep('start')}>Next</Button>
     );
   } else if (step === 'start') {
     title = 'How do you want to start?';
@@ -382,13 +382,13 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
     body = <StartStep start={start} setStart={setStart} />;
     footer = start === 'import'
       ? <Button onClick={() => setStep('file')}>Next</Button>
-      : <Button disabled={!start} onClick={() => finish('blank')}>Create document</Button>;
+      : <Button onClick={() => finish('blank')}>Create document</Button>;
   } else if (step === 'file') {
     title = 'Import a document';
     eyebrow = cadName;
     onBack = () => setStep('start');
     body = <ImportFileStep source={source} setSource={(s) => { setError(''); setSource(s); }} error={error} />;
-    footer = <Button disabled={!source} onClick={runImport}>Import</Button>;
+    footer = <Button onClick={() => { if (!source) setSource({ name: SAMPLE_PDF, sample: true }); runImport(source || { name: SAMPLE_PDF, sample: true }); }}>Import</Button>;
   } else {
     title = progress.stage >= 4 ? 'Your operation steps are ready' : 'Creating your operation steps';
     eyebrow = source?.name;
