@@ -142,7 +142,7 @@ const STARTS = [
   },
 ];
 
-function StartStep({ start, setStart }) {
+function StartStep({ start, setStart, source, setSource, error }) {
   return (
     <div className="aw6-start">
       <p className="aw6-help">
@@ -172,13 +172,14 @@ function StartStep({ start, setStart }) {
           );
         })}
       </div>
+      {start === 'import' ? <ImportDrop source={source} setSource={setSource} error={error} /> : null}
     </div>
   );
 }
 
-/* ---------- Step 3: choose the document to import ---------- */
+/* ---------- Inline upload shown when Import is selected ---------- */
 
-function ImportFileStep({ source, setSource, error }) {
+function ImportDrop({ source, setSource, error }) {
   const [hot, setHot] = useState(false);
 
   const take = (file) => {
@@ -187,12 +188,9 @@ function ImportFileStep({ source, setSource, error }) {
   };
 
   return (
-    <div className="aw6-import">
-      <p className="aw6-help">
-        Upload the work instruction as a PDF. The whole document comes in, so there is nothing to pick or set up.
-      </p>
+    <div className="aw6-import is-inline">
       <div
-        className={`aw6-drop is-tall${hot ? ' is-hot' : ''}${source ? ' is-filled' : ''}`}
+        className={`aw6-drop${hot ? ' is-hot' : ''}${source ? ' is-filled' : ''}`}
         onDragOver={(event) => { event.preventDefault(); setHot(true); }}
         onDragLeave={() => setHot(false)}
         onDrop={(event) => { event.preventDefault(); setHot(false); take(event.dataTransfer.files?.[0]); }}
@@ -209,7 +207,7 @@ function ImportFileStep({ source, setSource, error }) {
           <label className="aw6-drop-main">
             <Upload size={18} />
             <strong>Upload a PDF</strong>
-            <span>Click or drag your work instruction here</span>
+            <span>Click or drag your work instruction here. Every page comes in as an operation step.</span>
             <input type="file" accept=".pdf,application/pdf" onChange={(event) => { take(event.target.files?.[0]); event.target.value = ''; }} />
           </label>
         )}
@@ -219,7 +217,7 @@ function ImportFileStep({ source, setSource, error }) {
   );
 }
 
-/* ---------- Step 4: guided walkthrough while the import runs ---------- */
+/* ---------- Step 3: guided walkthrough while the import runs ---------- */
 
 function Walkthrough({ source, cadName, progress, pages }) {
   const lines = [
@@ -321,7 +319,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       } catch {
         if (!alive()) return;
         setError('That PDF could not be opened. Try another file or use the sample.');
-        setStep('file');
+        setStep('start');
         return;
       }
     } else {
@@ -374,16 +372,18 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
     title = 'How do you want to start?';
     eyebrow = cadName;
     onBack = () => setStep('cad');
-    body = <StartStep start={start} setStart={setStart} />;
+    body = (
+      <StartStep
+        start={start}
+        setStart={setStart}
+        source={source}
+        setSource={(s) => { setError(''); setSource(s); }}
+        error={error}
+      />
+    );
     footer = start === 'import'
-      ? <Button onClick={() => setStep('file')}>Next</Button>
+      ? <Button onClick={() => { const src = source || { name: SAMPLE_PDF, sample: true }; if (!source) setSource(src); runImport(src); }}>Import</Button>
       : <Button onClick={() => finish('blank')}>Create document</Button>;
-  } else if (step === 'file') {
-    title = 'Import a document';
-    eyebrow = cadName;
-    onBack = () => setStep('start');
-    body = <ImportFileStep source={source} setSource={(s) => { setError(''); setSource(s); }} error={error} />;
-    footer = <Button onClick={() => { if (!source) setSource({ name: SAMPLE_PDF, sample: true }); runImport(source || { name: SAMPLE_PDF, sample: true }); }}>Import</Button>;
   } else {
     title = progress.stage >= 4 ? 'Your operation steps are ready' : 'Creating your operation steps';
     eyebrow = source?.name;

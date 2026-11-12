@@ -210,6 +210,8 @@
 .aw6-start-text strong { font-size: var(--q20-font-size-md); color: var(--q20-color-text); }
 .aw6-start-text span { font-size: var(--q20-font-size-sm); line-height: var(--q20-line-height-normal); color: var(--q20-color-text-lead); }
 .aw6-start-text em { font-style: normal; font-size: var(--q20-font-size-xs); color: var(--q20-color-text-muted); }
+.aw6-import.is-inline { margin-top: var(--q20-space-3); }
+.aw6-import.is-inline .aw6-drop { min-height: 110px; }
 
 .aw6-radio {
   width: 18px;
