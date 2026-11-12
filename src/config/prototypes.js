@@ -189,6 +189,13 @@ export const PROTOTYPES = [
     path: '/prototype/ai-workflow-5',
   },
   {
+    id: 'ai-workflow-6',
+    title: 'AI workflow 6',
+    description:
+      'Prototype 6, from AI workflow 5. New document asks for the CAD, then Blank document or Import. Import brings in every page as an operation step with a guided walkthrough. Documents open in the editor with an assistant panel that guides you into CAD View and holds the build prompts. Own saved state; add ?reset to start over.',
+    path: '/prototype/ai-workflow-6',
+  },
+  {
     id: 'ai-workflow-5-flow',
     title: 'AI workflow 5 flow',
     description:
