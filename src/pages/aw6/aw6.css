@@ -557,3 +557,6 @@
 /* Keep the modal above the Quarter20 top bar. */
 .q20-overlay:has(.aw6-modal) { z-index: 1000; }
 .aw6-modal .q20-modal__body { overflow: auto; }
+
+/* A blank document is one empty page. */
+.aw6-blank-page { min-height: 1000px; }

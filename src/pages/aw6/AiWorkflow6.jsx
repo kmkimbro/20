@@ -9,7 +9,7 @@ import CreateDocument6 from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
 import { pageImages } from './pdfPages.js';
 import {
-  CAD_READY_MS, createdLabel, emptyOperation, importedOperations, loadState, resetState, saveState, uid,
+  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, saveState, uid,
 } from './model.js';
 import '../layoutBuilder/layout-builder.css';
 import '../../design-system/tokens.css';
@@ -25,13 +25,17 @@ function NavItem({ icon, label, active, nested, onClick }) {
   );
 }
 
-function DocTile({ doc, project, onOpen }) {
+function DocTile({ doc, project, onOpen, now }) {
+  const processing = now < (doc.cadReadyAt || 0);
   return (
-    <button type="button" className="lb-doc-tile" onClick={() => onOpen(doc.id)}>
-      <div className="lb-doc-tile-thumb"><FileText size={28} /></div>
+    <button type="button" className={`lb-doc-tile${processing ? ' is-uploading' : ''}`} onClick={() => onOpen(doc.id)}>
+      <div className="lb-doc-tile-thumb">
+        {processing ? <span className="lb-upload-track" aria-hidden="true"><span /></span> : <FileText size={28} />}
+      </div>
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
+          {processing ? `Processing ${doc.cadName} · ` : ''}
           {doc.start === 'import' ? 'Imported · ' : ''}
           {project ? `${project} · ` : ''}
           {`Created ${doc.created}`}
@@ -54,6 +58,15 @@ export default function AiWorkflow6() {
   const [pluginsOpen, setPluginsOpen] = useState(false);
 
   useEffect(() => { saveState(state); }, [state]);
+
+  // Re-render while a CAD is processing so the document tiles update when it is ready.
+  const [now, setNow] = useState(Date.now());
+  const anyProcessing = state.documents.some((doc) => (doc.cadReadyAt || 0) > now);
+  useEffect(() => {
+    if (!anyProcessing) return undefined;
+    const id = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [anyProcessing]);
 
   const updateDoc = useCallback((id, patch) => {
     setState((prev) => ({
@@ -87,7 +100,7 @@ export default function AiWorkflow6() {
       start: draft.start,
       sourceName: draft.sourceName,
       pageCount,
-      operations: draft.start === 'import' ? importedOperations(pageCount) : [emptyOperation(1)],
+      operations: draft.start === 'import' ? importedOperations(pageCount) : [],
       bom: false,
       messages: [],
     };
@@ -99,6 +112,12 @@ export default function AiWorkflow6() {
       documents: [...prev.documents, doc],
     }));
     setCreating(false);
+    // Blank: wait on the project page while the CAD processes, then open into CAD View.
+    if (draft.start === 'blank') {
+      setNow(Date.now());
+      setView('project');
+      return;
+    }
     openDoc(id);
   };
 
@@ -204,7 +223,7 @@ export default function AiWorkflow6() {
               {(view === 'home' ? state.documents : projectDocs).length ? (
                 <div className="lb-doc-home-grid">
                   {(view === 'home' ? state.documents : projectDocs).map((doc) => (
-                    <DocTile key={doc.id} doc={doc} project={view === 'home' ? projectName(doc.projectId) : ''} onOpen={openDoc} />
+                    <DocTile key={doc.id} doc={doc} project={view === 'home' ? projectName(doc.projectId) : ''} onOpen={openDoc} now={now} />
                   ))}
                 </div>
               ) : (

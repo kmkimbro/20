@@ -88,6 +88,7 @@ export default function AssistPanel({
   const endRef = useRef(null);
   const messages = doc.messages || [];
   const imported = doc.start === 'import';
+  const blank = doc.start === 'blank';
   const starters = imported ? IMPORT_STARTERS : BLANK_STARTERS;
   const hasCadContent = doc.operations.some((op) => op.shot != null);
   const opCount = doc.operations.length;
@@ -265,8 +266,8 @@ export default function AssistPanel({
         </button>
       </div>
       <div className="aw6-panel-body">
-        {guide}
-        {nav === 'doc' ? (
+        {blank ? null : guide}
+        {nav === 'doc' || blank ? (
           <section className="aw6-starters">
             <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>
             {!cadReady ? <p className="aw6-muted">These use the model, so they unlock when the CAD is ready.</p> : null}
@@ -309,7 +310,7 @@ export default function AssistPanel({
           ref={inputRef}
           value={text}
           rows={3}
-          placeholder={`Ask about ${opCount === 1 ? 'this document' : `these ${opCount} operations`}`}
+          placeholder={`Ask about ${opCount <= 1 ? 'this document' : `these ${opCount} operations`}`}
           aria-label="Message the assistant"
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {

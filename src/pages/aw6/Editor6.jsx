@@ -126,8 +126,11 @@ function OperationSheet({ op, index, doc, onOpenCad }) {
 }
 
 export default function Editor6({ document: doc, onBack, onUpdate }) {
-  const [nav, setNav] = useState('doc');
-  const [panelOpen, setPanelOpen] = useState(true);
+  const blank = doc.start === 'blank';
+  const emptyDoc = blank && doc.operations.length === 0 && !doc.bom;
+  // Blank documents open on the CAD side with the assistant closed; imports open on the document.
+  const [nav, setNav] = useState(blank ? 'cad' : 'doc');
+  const [panelOpen, setPanelOpen] = useState(!blank);
   const [now, setNow] = useState(Date.now());
   const [cadOpId, setCadOpId] = useState(doc.operations[0]?.id || null);
   const canvasRef = useRef(null);
@@ -231,6 +234,7 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
         <div className="lb-doc">
           <aside className="lb-doc-tree">
             <div className="lb-tree-title">{doc.name}</div>
+            {emptyDoc ? null : (<>
             <button type="button" className="lb-tree-item" onClick={() => scrollTo('aw6-sheet-cover')}>
               <BookOpen size={14} /> Cover
             </button>
@@ -249,10 +253,12 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
             <button type="button" className="lb-tree-item aw6-tree-add" onClick={addOperation}>
               <Plus size={14} /> Add operation
             </button>
+            </>)}
           </aside>
           <div className="lb-doc-stage">
             <Toolbar />
             <div className="lb-doc-canvas" ref={canvasRef}>
+              {emptyDoc ? <article className="lb-sheet aw6-sheet aw6-blank-page" aria-label="Empty page" /> : (<>
               <article id="aw6-sheet-cover" className="lb-sheet aw6-sheet aw6-cover">
                 <div className="lb-sheet-body">
                   <span className="aw6-cover-eyebrow">Work instruction</span>
@@ -293,6 +299,7 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
               {doc.operations.map((op, index) => (
                 <OperationSheet key={op.id} op={op} index={index} doc={doc} onOpenCad={goCad} />
               ))}
+              </>)}
             </div>
           </div>
           {panel}

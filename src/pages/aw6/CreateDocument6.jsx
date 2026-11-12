@@ -351,7 +351,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
     onCreate({
       name: docName,
       cadName,
-      cadSource: draft.cad?.source || 'library',
+      cadSource: draft.cad?.source || 'upload',
       start: kind,
       sourceName: kind === 'import' ? source?.name : '',
       pages: kind === 'import' ? pages : [],
