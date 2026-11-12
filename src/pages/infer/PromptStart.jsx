@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
-  Check, ClipboardList, File, FileText, Hexagon, Images, Layers, LayoutGrid, Loader2, MessageSquare, Paperclip, Sparkles, Table, Type, X,
+  Check, ClipboardList, File, FileText, Hexagon, Images, Layers, LayoutGrid, ListOrdered, Loader2, MessageSquare, Paperclip, PenLine, Sparkles, Table,
+  Type, X,
 } from 'lucide-react';
 import './prompt-start.css';
 
 // AI workflow 5 (prompts): the way to start is chosen on the empty document, like a new deck in PowerPoint
-// or a blank Google Doc. Each tile fills an editable prompt instead of opening a setup wizard.
+// or a blank Google Doc. Blank does nothing. The other starts are bespoke prompts, and more can be added over time.
 export const START_TILES = [
   {
     id: 'blank',
-    label: 'None',
-    detail: 'Nothing is generated. Work the way you do today.',
+    label: 'Blank document',
+    detail: 'Start empty. Nothing is generated.',
     icon: File,
   },
   {
@@ -21,25 +22,82 @@ export const START_TILES = [
     magic: true,
   },
   {
-    id: 'auto_assembly',
-    label: 'Auto Assembly',
-    detail: 'Suggest an assembly plan from the CAD.',
+    id: 'doc_type',
+    label: 'Document type',
+    detail: 'Pick the kind of document and get prompts made for it.',
+    icon: ClipboardList,
+    magic: true,
+  },
+  {
+    id: 'assembly',
+    label: 'Assembly',
+    detail: 'Build the assembly steps from the CAD.',
     icon: Layers,
-    prompt: 'Read the CAD and suggest an assembly order. Create an operation for each step with a screenshot and the parts it uses.',
+    magic: true,
+  },
+];
+
+const ASSEMBLY_PROMPTS = [
+  {
+    id: 'order', label: 'Suggest an assembly order', icon: Layers, on: true,
+    prompt: 'Read the CAD and suggest an order to assemble the parts in.',
+  },
+  {
+    id: 'ops', label: 'One operation per step', icon: ListOrdered, on: true,
+    prompt: 'Create an operation for each step in that order, named for what is done in it.',
+  },
+  {
+    id: 'shots', label: 'Screenshot each step', icon: Images, on: true,
+    prompt: 'Add a screenshot of the model to each step, showing the parts being added.',
+  },
+  {
+    id: 'parts', label: 'Parts used in each step', icon: Table,
+    prompt: 'Add a parts table to each step with the parts it uses.',
+  },
+];
+
+export const DOC_TYPES = [
+  {
+    id: 'work_instruction',
+    label: 'Work instruction',
+    icon: ClipboardList,
+    prompts: [
+      { id: 'ops', label: 'Operations from the CAD', icon: ListOrdered, on: true, prompt: 'Create an operation for each step in the assembly, named for what is done in it.' },
+      { id: 'shots', label: 'Screenshot each step', icon: Images, on: true, prompt: 'Add a screenshot of the model to each operation.' },
+      { id: 'notes', label: 'Write step notes', icon: Type, on: true, prompt: 'Write a short note for each operation that says how to do it.' },
+      { id: 'table', label: 'Parts table on each step', icon: Table, prompt: 'Add a parts table to each operation.' },
+      { id: 'callouts', label: 'Callouts on images', icon: MessageSquare, prompt: 'Add numbered callouts to each screenshot for the parts in that step.' },
+    ],
   },
   {
     id: 'parts_list',
     label: 'Parts list',
-    detail: 'Generate a parts list straight from the CAD.',
     icon: Hexagon,
-    prompt: 'Generate a parts list from the CAD with the item number, part number, name, and quantity for every part.',
+    prompts: [
+      { id: 'all', label: 'Every part in the model', icon: Hexagon, on: true, prompt: 'List every part in the CAD with its item number, part number, name, and quantity.' },
+      { id: 'group', label: 'Group by subassembly', icon: Layers, prompt: 'Group the parts under the subassembly they belong to.' },
+      { id: 'thumbs', label: 'Add part thumbnails', icon: Images, prompt: 'Add a thumbnail of each part next to it.' },
+    ],
   },
   {
-    id: 'work_instruction',
-    label: 'Work instruction',
-    detail: 'Generate a work instruction from the CAD.',
-    icon: ClipboardList,
-    prompt: 'Generate a work instruction from the CAD. Add an operation for each step with a screenshot, a short note, and a parts table.',
+    id: 'quality_checklist',
+    label: 'Quality checklist',
+    icon: Check,
+    prompts: [
+      { id: 'checks', label: 'Checks for each part', icon: Check, on: true, prompt: 'Create an inspection check for each part, with what to measure and the expected result.' },
+      { id: 'shots', label: 'Image for each check', icon: Images, prompt: 'Add a screenshot that shows where each check is done.' },
+      { id: 'results', label: 'Result fields', icon: Table, on: true, prompt: 'Add a pass or fail field and a notes field to each check.' },
+    ],
+  },
+  {
+    id: 'drawing_release',
+    label: 'Drawing package',
+    icon: PenLine,
+    prompts: [
+      { id: 'views', label: 'Standard views', icon: Images, on: true, prompt: 'Create a sheet with the front, top, side, and isometric views of the model.' },
+      { id: 'bom', label: 'Bill of materials', icon: Table, on: true, prompt: 'Add a bill of materials to the first sheet.' },
+      { id: 'notes', label: 'Annotations', icon: MessageSquare, prompt: 'Add part balloons and general notes to each sheet.' },
+    ],
   },
 ];
 
@@ -86,50 +144,68 @@ export const IMPORT_PROMPTS = [
 const SAMPLE_SOURCE = 'Drone Assembly Work Instruction.pdf';
 const RUN_STEP_MS = 1100;
 
-const importText = (ids) => IMPORT_PROMPTS
+const textFor = (list, ids) => list
   .filter((item) => ids.includes(item.id))
   .map((item) => item.prompt)
   .join('\n\n');
 
+const defaults = (list) => list.filter((item) => item.on).map((item) => item.id);
+
 export default function PromptStart({ cadName, cadStatus, onStart }) {
-  const [tile, setTile] = useState(null);
+  const [tile, setTile] = useState('blank');
+  const [docType, setDocType] = useState(null);
   const [picks, setPicks] = useState([]);
   const [text, setText] = useState('');
   const [edited, setEdited] = useState(false);
   const [source, setSource] = useState('');
   const [running, setRunning] = useState(null);
 
-  const chosen = START_TILES.find((item) => item.id === tile) || null;
   const isImport = tile === 'import';
+  const typeItem = DOC_TYPES.find((item) => item.id === docType) || null;
+  const list = isImport ? IMPORT_PROMPTS
+    : tile === 'assembly' ? ASSEMBLY_PROMPTS
+      : tile === 'doc_type' && typeItem ? typeItem.prompts : [];
+
+  const useList = (next, ids) => {
+    setPicks(ids);
+    setEdited(false);
+    setText(textFor(next, ids));
+  };
 
   const chooseTile = (id) => {
     setTile(id);
-    setEdited(false);
-    if (id === 'import') {
-      setText(importText(picks));
-    } else {
-      setText(START_TILES.find((item) => item.id === id)?.prompt || '');
-    }
+    if (id === 'import') useList(IMPORT_PROMPTS, []);
+    else if (id === 'assembly') useList(ASSEMBLY_PROMPTS, defaults(ASSEMBLY_PROMPTS));
+    else if (id === 'doc_type' && typeItem) useList(typeItem.prompts, defaults(typeItem.prompts));
+    else useList([], []);
+  };
+
+  const chooseType = (id) => {
+    const item = DOC_TYPES.find((type) => type.id === id);
+    setDocType(id);
+    useList(item.prompts, defaults(item.prompts));
   };
 
   const togglePick = (id) => {
     const next = picks.includes(id) ? picks.filter((item) => item !== id) : [...picks, id];
     setPicks(next);
-    if (!edited) setText(importText(next));
+    if (!edited) setText(textFor(list, next));
   };
 
-  const steps = isImport
-    ? IMPORT_PROMPTS.filter((item) => picks.includes(item.id)).map((item) => item.label)
-    : [chosen?.label ? `Generate ${chosen.label.toLowerCase()}` : 'Generate'];
+  const picked = list.filter((item) => picks.includes(item.id)).map((item) => item.label);
+  const steps = picked.length ? picked : ['Run your prompt'];
 
-  const canRun = tile === 'blank'
-    || (isImport ? Boolean(source && text.trim()) : Boolean(text.trim()));
+  const canRun = tile === 'blank' || (
+    Boolean(text.trim())
+    && (!isImport || Boolean(source))
+    && (tile !== 'doc_type' || Boolean(typeItem))
+  );
 
   const detail = () => ({
     prompt: tile === 'blank' ? '' : text.trim(),
-    picks: isImport ? picks : [],
-    docType: tile,
-    templateId: tile === 'parts_list' ? 'parts_list' : 'work_instruction',
+    picks: tile === 'blank' ? [] : picks,
+    docType: tile === 'doc_type' ? docType : tile,
+    templateId: tile === 'doc_type' && docType ? docType : 'work_instruction',
     sourceName: isImport ? source : '',
   });
 
@@ -144,9 +220,8 @@ export default function PromptStart({ cadName, cadStatus, onStart }) {
 
   useEffect(() => {
     if (running === null) return undefined;
-    const total = Math.max(steps.length, 1);
     const id = window.setTimeout(() => {
-      if (running + 1 >= total) onStart(detail());
+      if (running + 1 >= steps.length) onStart(detail());
       else setRunning(running + 1);
     }, RUN_STEP_MS);
     return () => window.clearTimeout(id);
@@ -157,7 +232,7 @@ export default function PromptStart({ cadName, cadStatus, onStart }) {
     return (
       <article className="lb-sheet ps-sheet">
         <div className="ps-run">
-          <p className="ps-eyebrow">{isImport ? `From ${source}` : cadName}</p>
+          <p className="ps-eyebrow">{isImport ? `From ${source}` : typeItem && tile === 'doc_type' ? `${typeItem.label} from ${cadName}` : cadName}</p>
           <h2>Generating your document</h2>
           <ol className="ps-run-list">
             {steps.map((label, index) => (
@@ -202,7 +277,7 @@ export default function PromptStart({ cadName, cadStatus, onStart }) {
           })}
         </div>
 
-        {tile && tile !== 'blank' ? (
+        {tile !== 'blank' ? (
           <div className="ps-compose">
             {isImport ? (
               <>
@@ -219,9 +294,36 @@ export default function PromptStart({ cadName, cadStatus, onStart }) {
                     <span>Attach the document to generate from</span>
                   </button>
                 )}
-                <p className="ps-label">Prompts</p>
+              </>
+            ) : null}
+            {tile === 'doc_type' ? (
+              <>
+                <p className="ps-label">Type of document</p>
+                <div className="ps-types" role="radiogroup" aria-label="Type of document">
+                  {DOC_TYPES.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={docType === item.id}
+                        className={docType === item.id ? 'is-on' : ''}
+                        onClick={() => chooseType(item.id)}
+                      >
+                        <Icon size={15} />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
+            {list.length ? (
+              <>
+                <p className="ps-label">{tile === 'doc_type' ? `Prompts for a ${typeItem.label.toLowerCase()}` : 'Prompts'}</p>
                 <div className="ps-chips">
-                  {IMPORT_PROMPTS.map((item) => {
+                  {list.map((item) => {
                     const Icon = item.icon;
                     const on = picks.includes(item.id);
                     return (
@@ -232,22 +334,22 @@ export default function PromptStart({ cadName, cadStatus, onStart }) {
                     );
                   })}
                 </div>
+                <p className="ps-label">What will run</p>
+                <textarea
+                  className="ps-text"
+                  aria-label="Prompt"
+                  rows={5}
+                  value={text}
+                  placeholder="Pick prompts above, or write your own."
+                  onChange={(event) => { setText(event.target.value); setEdited(true); }}
+                />
               </>
             ) : null}
-            <p className="ps-label">{isImport ? 'What will run' : 'Prompt'}</p>
-            <textarea
-              className="ps-text"
-              aria-label="Prompt"
-              rows={isImport ? 5 : 3}
-              value={text}
-              placeholder={isImport ? 'Pick prompts above, or write your own.' : 'Describe what to generate.'}
-              onChange={(event) => { setText(event.target.value); setEdited(true); }}
-            />
           </div>
         ) : null}
 
         <div className="ps-actions">
-          {tile === 'blank' ? <span className="ps-hint">The document opens as it does today.</span> : <span />}
+          {tile === 'blank' ? <span className="ps-hint">Opens an empty document. You can run prompts later from Ask.</span> : <span />}
           <button type="button" className="ps-go" disabled={!canRun} onClick={run}>
             {tile === 'blank' ? 'Open document' : (
               <>

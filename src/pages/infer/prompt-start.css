@@ -280,3 +280,51 @@
 @media (max-width: 900px) {
   .ps-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.ps-tiles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ps-tiles button {
+  min-height: 118px;
+}
+
+.ps-types {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ps-types button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ps-types button svg {
+  color: #6B7280;
+  flex: none;
+}
+
+.ps-types button.is-on {
+  border-color: #4F6EF7;
+  background: #EEF1FE;
+}
+
+.ps-types button.is-on svg {
+  color: #4F6EF7;
+}
+
+@media (max-width: 900px) {
+  .ps-types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
