@@ -107,6 +107,7 @@ export default function LayoutBuilder({
   onLinkIntegration,
   parseSetup = false,
   setupInUpload = false,
+  promptStart = false,
 } = {}) {
   const pendingId = useRef(pendingInfer ? uid('doc') : null);
   const [state, setState] = useState(() => {
@@ -494,6 +495,7 @@ export default function LayoutBuilder({
             cadParsing: false,
             parsePrompt: detail?.prompt || '',
             parsePicks: detail?.picks || [],
+            ...(detail?.docType ? { parseDocType: detail.docType } : {}),
             ...(detail?.title ? { name: detail.title } : {}),
             ...(detail?.templateId ? { templateId: detail.templateId } : {}),
             ...(detail?.sourceName ? { sourceName: detail.sourceName } : {}),
@@ -628,8 +630,9 @@ export default function LayoutBuilder({
           cadParsing={Boolean(activeDoc.cadParsing)}
           parseSetup={parseSetup}
           setupInUpload={setupInUpload}
+          promptStart={promptStart}
           onCadParsed={(detail) => (
-            parseSetup ? saveParseOptions(activeDoc.id, detail) : finishCadParse(activeDoc.id, detail)
+            parseSetup && !promptStart ? saveParseOptions(activeDoc.id, detail) : finishCadParse(activeDoc.id, detail)
           )}
           awaitingPlan={assemblyPlan && activeDoc.cadLinked && !activeDoc.planAccepted}
         />

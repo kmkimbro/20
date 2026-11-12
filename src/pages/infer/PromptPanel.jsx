@@ -7,7 +7,7 @@ const PROMPTS = [
   'Add a parts table to the step',
 ];
 
-export default function PromptPanel({ onClose, target = null, onClearTarget, history = [], onSend, original = null }) {
+export default function PromptPanel({ suggestions = PROMPTS, onClose, target = null, onClearTarget, history = [], onSend, original = null }) {
   const fileRef = useRef(null);
   const menuRef = useRef(null);
   const [chosen, setChosen] = useState('');
@@ -87,7 +87,7 @@ export default function PromptPanel({ onClose, target = null, onClearTarget, his
       ) : null}
       <div className="lb-prompt-dock">
         <div className="lb-prompt-chips">
-          {PROMPTS.map((prompt) => (
+          {suggestions.map((prompt) => (
             <button
               key={prompt}
               type="button"

@@ -1,0 +1,282 @@
+.ps-sheet {
+  min-height: 0;
+}
+
+.ps-start,
+.ps-run {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 32px 36px 28px;
+}
+
+.ps-eyebrow {
+  margin: 0 0 6px;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ps-eyebrow span {
+  font-weight: 500;
+}
+
+.ps-start h2,
+.ps-run h2 {
+  margin: 0 0 20px;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.ps-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ps-tiles button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 132px;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ps-tiles button:hover {
+  border-color: #C7D0FB;
+}
+
+.ps-tiles button.is-on {
+  border-color: #4F6EF7;
+  background: #EEF1FE;
+}
+
+.ps-tiles button strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.ps-tiles button > span:last-child {
+  color: #6B7280;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.ps-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.ps-tile-icon.is-magic,
+.ps-tiles button.is-on .ps-tile-icon {
+  background: #fff;
+  color: #4F6EF7;
+}
+
+.ps-tile-icon.is-magic {
+  background: #EEF1FE;
+}
+
+.ps-compose {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.ps-label {
+  margin: 0 0 8px;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ps-label:not(:first-child) {
+  margin-top: 18px;
+}
+
+.ps-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.ps-source span {
+  flex: 1;
+  font-weight: 600;
+}
+
+.ps-source button {
+  display: flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+.ps-source.is-empty {
+  border-style: dashed;
+  color: #4F6EF7;
+  cursor: pointer;
+}
+
+.ps-source.is-empty:hover {
+  background: #F8F9FF;
+}
+
+.ps-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ps-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-chips button.is-on {
+  border-color: #4F6EF7;
+  background: #EEF1FE;
+  color: #2436B0;
+}
+
+.ps-text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ps-text:focus {
+  outline: none;
+  border-color: #4F6EF7;
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.15);
+}
+
+.ps-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.ps-hint {
+  color: #6B7280;
+  font-size: 13px;
+}
+
+.ps-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #4F6EF7;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-go:disabled {
+  background: #C7D0FB;
+  cursor: default;
+}
+
+.ps-run-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-run-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  color: #9CA3AF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ps-run-list li.is-now,
+.ps-run-list li.is-done {
+  color: #111827;
+}
+
+.ps-run-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  color: #4F6EF7;
+}
+
+.ps-run-list li.is-done .ps-run-mark {
+  border-color: #4F6EF7;
+  background: #4F6EF7;
+  color: #fff;
+}
+
+.ps-run-list li.is-now .ps-run-mark svg {
+  animation: ps-spin 0.9s linear infinite;
+}
+
+@keyframes ps-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .ps-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
