@@ -167,7 +167,6 @@ function StartStep({ start, setStart, source, setSource, error }) {
                 <span>{item.detail}</span>
                 <em>{item.fit}</em>
               </span>
-              <span className={`aw6-radio${on ? ' is-on' : ''}`} aria-hidden="true" />
             </button>
           );
         })}

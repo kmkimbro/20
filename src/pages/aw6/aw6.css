@@ -181,7 +181,7 @@
 
 .aw6-start-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: start;
   gap: var(--q20-space-3);
   width: 100%;
@@ -194,7 +194,7 @@
   cursor: pointer;
 }
 .aw6-start-row:hover { border-color: var(--q20-color-border-strong); }
-.aw6-start-row.is-on { border-color: var(--q20-color-primary); box-shadow: var(--q20-focus-ring); }
+.aw6-start-row.is-on { border-color: var(--q20-color-primary); background: var(--q20-color-primary-subtle); box-shadow: var(--q20-focus-ring); }
 
 .aw6-start-icon {
   display: grid;
