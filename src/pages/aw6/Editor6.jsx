@@ -147,6 +147,12 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
     if (!doc.cadVisited) onUpdate({ cadVisited: true });
   };
 
+  // Landing on the Document tab always brings up the assistant with its prompts.
+  const goDoc = () => {
+    setNav('doc');
+    setPanelOpen(true);
+  };
+
   const scrollTo = (id) => {
     if (nav !== 'doc') setNav('doc');
     window.setTimeout(() => {
@@ -189,7 +195,7 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
       activeCadOp={activeCadOp}
       activeCadIndex={doc.operations.indexOf(activeCadOp)}
       onOpenCad={goCad}
-      onOpenDoc={() => setNav('doc')}
+      onOpenDoc={goDoc}
       onCapture={captureFor}
       onUpdate={onUpdate}
       onClose={() => setPanelOpen(false)}
@@ -201,7 +207,7 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
     <div className="lb-app aw6-editor">
       <Header
         navActive={nav}
-        onNavChange={(next) => (next === 'cad' ? goCad() : setNav(next))}
+        onNavChange={(next) => (next === 'cad' ? goCad() : next === 'doc' ? goDoc() : setNav(next))}
         onBack={onBack}
         onPrompts={() => setPanelOpen((open) => !open)}
         promptsActive={panelOpen}
