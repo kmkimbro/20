@@ -3,8 +3,8 @@ import LayoutBuilder from '../LayoutBuilder.jsx';
 import OnshapeWorkspace from './OnshapeWorkspace.jsx';
 import './infer.css';
 
-// AI workflow 5 with prompt tiles: you upload the CAD, the document opens, and you pick how to start on the
-// empty document (None, Import, Auto Assembly, Parts list, Work instruction). Each tile fills an editable prompt.
+// AI workflow 5 with a Google Slides style start: after the CAD uploads, a "Let's start creating" screen offers
+// AI generators, Templates, Import (match a document's format or duplicate it), and Blank.
 export default function AiWorkflow5Prompts() {
   const [source, setSource] = useState(null);
   const [pending, setPending] = useState(null);

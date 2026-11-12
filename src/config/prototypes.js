@@ -192,7 +192,7 @@ export const PROTOTYPES = [
     id: 'ai-workflow-5-prompts',
     title: 'AI workflow 5 · prompts',
     description:
-      'AI workflow 5 reworked around prompt tiles. Upload the CAD, then pick how to start on the empty document: None, Import, Auto Assembly, Parts list, or Work instruction. Each fills an editable prompt, and Import offers the AI Control prompts as tiles.',
+      'AI workflow 5 with a Google Slides style start. After the CAD uploads, pick from AI generators, Templates, Import (match a document\'s format or duplicate it), or Blank.',
     path: '/prototype/ai-workflow-5-prompts',
   },
   {

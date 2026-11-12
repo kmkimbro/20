@@ -8,7 +8,7 @@ import Header from '../../components/Header.jsx';
 import CadView from '../../components/CadView.jsx';
 import ModelStage from '../infer/ModelStage.jsx';
 import PromptPanel from '../infer/PromptPanel.jsx';
-import PromptStart, { IMPORT_PROMPTS } from '../infer/PromptStart.jsx';
+import StartCreating, { IMPORT_PROMPTS } from '../infer/StartCreating.jsx';
 import ParseSetup from '../infer/ParseSetup.jsx';
 import {
   C, CURRENT_USER, DATE_FORMATS, PAGE_FORMATS, DOC_PAGES, PRINT_PAGES, DOC_TEMPLATES,
@@ -895,12 +895,19 @@ export default function DocumentView({
             />
             <div className="lb-doc-canvas">
               {cadParsing && promptStart ? (
-                <PromptStart
-                  key={doc.id}
-                  cadName={doc.cadFileLabel || 'CAD'}
-                  cadStatus={cadDone ? 'CAD read' : 'Reading your CAD'}
-                  onStart={(detail) => onCadParsed?.(detail)}
-                />
+                <>
+                  <article className="lb-sheet lb-cad-wait">
+                    <div className="lb-sheet-head">
+                      <h2>{doc.cadFileLabel || 'CAD'}</h2>
+                    </div>
+                  </article>
+                  <StartCreating
+                    key={doc.id}
+                    cadName={doc.cadFileLabel || 'CAD'}
+                    cadStatus={cadDone ? 'Your CAD has been read.' : 'Reading your CAD while you choose.'}
+                    onStart={(detail) => onCadParsed?.(detail)}
+                  />
+                </>
               ) : cadParsing ? (
                 <article className="lb-sheet lb-cad-wait">
                   <div className="lb-sheet-head">
