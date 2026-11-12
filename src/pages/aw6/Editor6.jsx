@@ -127,7 +127,8 @@ function OperationSheet({ op, index, doc, onOpenCad }) {
 
 export default function Editor6({ document: doc, onBack, onUpdate, importJob, onDismissImport }) {
   const blank = doc.start === 'blank';
-  const emptyDoc = blank && doc.operations.length === 0 && !doc.bom;
+  // Nothing is in the document yet for a blank start, or while an import is still being brought in.
+  const emptyDoc = (blank || doc.importing) && doc.operations.length === 0 && !doc.bom;
   // Blank documents open on the CAD side with the assistant closed; imports open on the document.
   const [nav, setNav] = useState(blank ? 'cad' : 'doc');
   const [panelOpen, setPanelOpen] = useState(!blank);

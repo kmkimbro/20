@@ -82,8 +82,8 @@ export default function AiWorkflow6() {
     }));
   }, []);
 
-  // Runs an import after the modal closes. The document opens right away and the assistant panel shows each stage;
-  // operation steps appear in the document one by one as they are made.
+  // Runs an import after the modal closes. The document stays empty until it is done; the assistant panel shows
+  // each stage if the person opens the document while it runs. Timed to finish around when the CAD does.
   const runImport = async (docId, source) => {
     const run = jobRef.current + 1;
     jobRef.current = run;
@@ -92,7 +92,7 @@ export default function AiWorkflow6() {
     const patchJob = (patch) => { if (alive()) setImportJob((job) => (job ? { ...job, ...patch } : job)); };
     setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0, pages: [] });
     let list = [];
-    await wait(600);
+    await wait(1500);
     if (source.file) {
       try {
         const { images } = await renderPdfPages(source.file, (n, count) => patchJob({ total: count }));
@@ -111,22 +111,21 @@ export default function AiWorkflow6() {
     if (list.some((page) => page.image)) pageImages.set(docId, list.map((page) => page.image));
     updateDoc(docId, { pageCount: list.length });
     for (let i = 0; i < list.length; i += 1) {
-      await wait(160);
+      await wait(450);
       patchJob({ total: list.length, pages: list.slice(0, i + 1) });
     }
     if (!alive()) return;
     patchJob({ stage: 1 });
     const ops = importedOperations(list.length);
     for (let i = 0; i < list.length; i += 1) {
-      await wait(350);
-      if (!alive()) return;
+      await wait(1100);
       patchJob({ made: i + 1 });
-      updateDoc(docId, { operations: ops.slice(0, i + 1) });
     }
-    patchJob({ stage: 2 });
-    await wait(900);
     if (!alive()) return;
-    updateDoc(docId, { importing: false });
+    patchJob({ stage: 2 });
+    await wait(2500);
+    if (!alive()) return;
+    updateDoc(docId, { importing: false, operations: ops });
     patchJob({ stage: 3 });
   };
 
@@ -164,15 +163,10 @@ export default function AiWorkflow6() {
       documents: [...prev.documents, doc],
     }));
     setCreating(false);
-    // Blank waits on the project page while the CAD processes, then opens into CAD View.
-    // Import opens the document right away and the import runs in the assistant panel.
+    // Both paths land on the project page while the CAD processes (and, for an import, while the PDF is brought in).
     setNow(Date.now());
-    if (draft.start === 'import') {
-      runImport(id, draft.source);
-      openDoc(id);
-      return;
-    }
     setView('project');
+    if (draft.start === 'import') runImport(id, draft.source);
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);
