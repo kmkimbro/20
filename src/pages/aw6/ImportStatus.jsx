@@ -1,5 +1,4 @@
 import { Box, Check, Loader2, X } from 'lucide-react';
-import SamplePage from './SamplePage.jsx';
 
 /**
  * The import walkthrough, shown at the top of the assistant panel while an imported document is being built.
@@ -10,7 +9,12 @@ export default function ImportStatus({ job, cadName, cadReady, progress, onOpenC
   const lines = [
     { id: 'pages', label: job.total ? `Uploading ${job.sourceName} (${job.total} pages)` : `Uploading ${job.sourceName}` },
     { id: 'cad', label: cadReady ? `${cadName} is processed` : `Processing ${cadName} (${progress}%)` },
-    { id: 'ops', label: 'Creating an operation step for each page' },
+    {
+      id: 'ops',
+      label: job.stage === 2 && job.total
+        ? `Creating operation steps (${job.made} of ${job.total})`
+        : 'Creating an operation step for each page',
+    },
     { id: 'link', label: `Putting the steps on ${cadName}` },
   ];
 
@@ -46,18 +50,6 @@ export default function ImportStatus({ job, cadName, cadReady, progress, onOpenC
           );
         })}
       </ol>
-      {job.pages.length ? (
-        <div className="aw6-walk-pages" aria-label="Pages brought in">
-          {job.pages.map((page, index) => (
-            <figure key={index} className={index < job.made ? 'is-op' : ''}>
-              <div className="aw6-walk-thumb">
-                {page.image ? <img src={page.image} alt="" /> : <SamplePage page={page} index={index} mini />}
-              </div>
-              <figcaption>{index < job.made ? `Operation ${index + 1}` : `Page ${index + 1}`}</figcaption>
-            </figure>
-          ))}
-        </div>
-      ) : null}
       {done ? (
         <div className="aw6-walk-next">
           <strong>Next: CAD View</strong>
