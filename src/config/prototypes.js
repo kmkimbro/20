@@ -189,6 +189,13 @@ export const PROTOTYPES = [
     path: '/prototype/ai-workflow-5',
   },
   {
+    id: 'ai-workflow-5-prompts',
+    title: 'AI workflow 5 · prompts',
+    description:
+      'AI workflow 5 with a Google Slides style start. After the CAD uploads, pick from AI generators, Templates, Import (match a document\'s format or duplicate it), or Blank.',
+    path: '/prototype/ai-workflow-5-prompts',
+  },
+  {
     id: 'ai-workflow-5-flow',
     title: 'AI workflow 5 flow',
     description:
