@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft, Check, ClipboardList, Copy, FileText, Hexagon, Layers, LayoutTemplate, Loader2, Palette, Plus, Sparkles, Upload, X,
+  ArrowLeft, Check, ClipboardCheck, ClipboardList, Copy, File, FileText, Hexagon, Layers, LayoutTemplate, Loader2, Palette, Plus, Sparkles, Upload,
+  X,
 } from 'lucide-react';
 import './start-creating.css';
 
@@ -13,6 +14,7 @@ const GENERATORS = [
     label: 'Work instruction',
     detail: 'Generate a full work instruction with steps, images, and parts.',
     art: 'wi',
+    icon: ClipboardList,
     prompt: 'Generate a work instruction from the CAD. Add an operation for each step with a screenshot, a short note, and a parts table.',
     chips: ['Screenshot each step', 'Parts table on each step', 'Callouts on images', 'Safety notes'],
   },
@@ -21,6 +23,7 @@ const GENERATORS = [
     label: 'Parts list',
     detail: 'List every part in the model with numbers and quantities.',
     art: 'parts',
+    icon: Hexagon,
     prompt: 'List every part in the CAD with its item number, part number, name, and quantity.',
     chips: ['Group by subassembly', 'Add part thumbnails', 'Include materials'],
   },
@@ -28,7 +31,8 @@ const GENERATORS = [
     id: 'auto_assembly',
     label: 'Assembly steps',
     detail: 'Work out an assembly order and build an operation for each step.',
-    art: 'assembly',
+    art: 'wi',
+    icon: Layers,
     prompt: 'Read the CAD and suggest an order to assemble the parts in. Create an operation for each step with a screenshot of the parts being added.',
     chips: ['Parts used in each step', 'Exploded views', 'Tools for each step'],
   },
@@ -37,6 +41,7 @@ const GENERATORS = [
     label: 'Quality checklist',
     detail: 'Create inspection checks for the parts in your model.',
     art: 'quality',
+    icon: ClipboardCheck,
     prompt: 'Create an inspection check for each part with what to measure, the expected result, and a pass or fail field.',
     chips: ['Image for each check', 'Notes field', 'Sign-off section'],
   },
@@ -272,60 +277,58 @@ export default function StartCreating({ cadName, cadStatus, onStart }) {
       </div>
     );
   } else {
+    const blank = () => onStart({ prompt: '', picks: [], docType: 'blank', sourceName: '' });
     body = (
-      <div className="sc-pane">
-        <div className="sc-hello">
-          <h2>
-            <span>{cadName}</span>
-            {' '}
-            Let&apos;s start creating.
-          </h2>
-          {cadStatus ? <p>{cadStatus}</p> : null}
+      <>
+        <div className="sc-top">
+          <div>
+            <span className="sc-eyebrow">{cadName}</span>
+            <h2>How do you want to start?</h2>
+          </div>
+          <button type="button" className="sc-x" aria-label="Close" onClick={blank}><X size={18} /></button>
         </div>
-        <div className="sc-grid">
-          {GENERATORS.map((item) => (
-            <button key={item.id} type="button" className="sc-card" onClick={() => openGen(item)}>
-              <span className="sc-art"><Art kind={item.art} /><span className="sc-spark"><Sparkles size={14} /></span></span>
-              <span className="sc-card-text">
-                <strong>{item.label}</strong>
-                <span>{item.detail}</span>
-              </span>
-            </button>
-          ))}
-          <button type="button" className="sc-card" onClick={() => setView('templates')}>
-            <span className="sc-art is-templates"><Art kind="templates" /></span>
-            <span className="sc-card-text">
-              <strong>Templates</strong>
-              <span>Start from a Quarter20 template.</span>
-            </span>
-          </button>
-          <button type="button" className="sc-card" onClick={() => setView('import')}>
-            <span className="sc-art is-import"><Art kind="import" /></span>
-            <span className="sc-card-text">
-              <strong>Import</strong>
-              <span>Add an existing document to match its format, or bring in its content.</span>
-            </span>
-          </button>
-          <button type="button" className="sc-blank" onClick={() => onStart({ prompt: '', picks: [], docType: 'blank', sourceName: '' })}>
-            <Plus size={26} strokeWidth={1.5} />
-            Blank document
-          </button>
+        <div className="sc-pane">
+          {cadStatus ? <p className="sc-status">{cadStatus}</p> : null}
+          <p className="sc-label">Generate from your CAD</p>
+          <div className="sc-grid">
+            {GENERATORS.map((item) => (
+              <Tile key={item.id} icon={item.icon} magic title={item.label} detail={item.detail} onClick={() => openGen(item)} />
+            ))}
+          </div>
+          <p className="sc-label">Or start from</p>
+          <div className="sc-grid is-three">
+            <Tile icon={LayoutTemplate} title="Templates" detail="Start from a Quarter20 template." onClick={() => setView('templates')} />
+            <Tile icon={Upload} title="Import" detail="Use an existing document. Match its format or bring in its content." onClick={() => setView('import')} />
+            <Tile icon={File} title="Blank document" detail="Start empty. Nothing is generated." onClick={blank} />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <div className="sc-overlay" role="presentation">
-      <div className="sc-dialog" role="dialog" aria-modal="true" aria-label="Let's start creating">
-        {view === 'home' && !run ? (
-          <button type="button" className="sc-x" aria-label="Close" onClick={() => onStart({ prompt: '', picks: [], docType: 'blank', sourceName: '' })}>
-            <X size={18} />
-          </button>
-        ) : null}
+      <div className={`sc-dialog${view === 'home' && !run ? ' is-home' : ''}`} role="dialog" aria-modal="true" aria-label="Let's start creating">
         {body}
       </div>
     </div>
+  );
+}
+
+function Tile({
+  icon: Icon, title, detail, onClick, magic = false,
+}) {
+  return (
+    <button type="button" className="sc-tile" onClick={onClick}>
+      <span className="sc-tile-icon" aria-hidden="true"><Icon size={16} /></span>
+      <span className="sc-tile-text">
+        <strong>
+          {title}
+          {magic ? <Sparkles className="sc-tile-ai" size={12} /> : null}
+        </strong>
+        <span>{detail}</span>
+      </span>
+    </button>
   );
 }
 
@@ -366,31 +369,6 @@ function SourcePage({ page }) {
 }
 
 function Art({ kind }) {
-  if (kind === 'templates') {
-    return (
-      <span className="sc-fan">
-        <span className="sc-mini is-a"><MiniDoc /></span>
-        <span className="sc-mini is-b"><MiniDoc table /></span>
-        <span className="sc-mini is-c"><MiniDoc /></span>
-      </span>
-    );
-  }
-  if (kind === 'import') {
-    return (
-      <span className="sc-importart">
-        <span className="sc-mini"><MiniDoc /></span>
-        <span className="sc-import-badge"><Upload size={16} /></span>
-      </span>
-    );
-  }
-  if (kind === 'assembly') {
-    return (
-      <span className="sc-mini is-wide">
-        <Layers size={44} strokeWidth={1.2} />
-        <span className="sc-steps"><span>1</span><span>2</span><span>3</span></span>
-      </span>
-    );
-  }
   if (kind === 'parts') return <span className="sc-mini is-wide"><MiniDoc table /><Hexagon className="sc-mini-icon" size={18} /></span>;
   if (kind === 'quality') {
     return (
