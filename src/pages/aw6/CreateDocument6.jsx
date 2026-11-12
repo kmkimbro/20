@@ -214,11 +214,6 @@ function ImportFileStep({ source, setSource, error }) {
           </label>
         )}
       </div>
-      {!source ? (
-        <button type="button" className="aw6-text-btn" onClick={() => setSource({ name: SAMPLE_PDF, sample: true })}>
-          No PDF handy? Use the sample work instruction
-        </button>
-      ) : null}
       {error ? <p className="aw6-error">{error}</p> : null}
     </div>
   );
