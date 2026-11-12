@@ -35,7 +35,7 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {doc.importing ? `Importing ${doc.sourceName} · ` : processing ? `Processing ${doc.cadName} · ` : ''}
+          {now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
           {doc.start === 'import' ? 'Imported · ' : ''}
           {project ? `${project} · ` : ''}
           {`Created ${doc.created}`}
@@ -82,9 +82,10 @@ export default function AiWorkflow6() {
     }));
   }, []);
 
-  // Runs an import after the modal closes. The document stays empty until it is done; the assistant panel shows
-  // each stage if the person opens the document while it runs. Timed to finish around when the CAD does.
-  const runImport = async (docId, source) => {
+  // Runs an import after the modal closes, in the order it would really happen:
+  // 0 upload the PDF pages, 1 wait for the CAD to finish processing, 2 make an operation step per page,
+  // 3 put the steps on the CAD, 4 done. The document stays empty until the end.
+  const runImport = async (docId, source, cadReadyAt) => {
     const run = jobRef.current + 1;
     jobRef.current = run;
     const alive = () => jobRef.current === run;
@@ -92,7 +93,7 @@ export default function AiWorkflow6() {
     const patchJob = (patch) => { if (alive()) setImportJob((job) => (job ? { ...job, ...patch } : job)); };
     setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0, pages: [] });
     let list = [];
-    await wait(1500);
+    await wait(800);
     if (source.file) {
       try {
         const { images } = await renderPdfPages(source.file, (n, count) => patchJob({ total: count }));
@@ -105,28 +106,31 @@ export default function AiWorkflow6() {
       }
     } else {
       list = samplePages();
-      await wait(900);
     }
     if (!alive()) return;
     if (list.some((page) => page.image)) pageImages.set(docId, list.map((page) => page.image));
     updateDoc(docId, { pageCount: list.length });
     for (let i = 0; i < list.length; i += 1) {
-      await wait(450);
+      await wait(300);
       patchJob({ total: list.length, pages: list.slice(0, i + 1) });
     }
     if (!alive()) return;
     patchJob({ stage: 1 });
+    const left = cadReadyAt - Date.now();
+    if (left > 0) await wait(left);
+    if (!alive()) return;
+    patchJob({ stage: 2 });
     const ops = importedOperations(list.length);
     for (let i = 0; i < list.length; i += 1) {
-      await wait(1100);
+      await wait(700);
       patchJob({ made: i + 1 });
     }
     if (!alive()) return;
-    patchJob({ stage: 2 });
-    await wait(2500);
+    patchJob({ stage: 3 });
+    await wait(1500);
     if (!alive()) return;
     updateDoc(docId, { importing: false, operations: ops });
-    patchJob({ stage: 3 });
+    patchJob({ stage: 4 });
   };
 
   const openDoc = (id) => {
@@ -166,7 +170,7 @@ export default function AiWorkflow6() {
     // Both paths land on the project page while the CAD processes (and, for an import, while the PDF is brought in).
     setNow(Date.now());
     setView('project');
-    if (draft.start === 'import') runImport(id, draft.source);
+    if (draft.start === 'import') runImport(id, draft.source, doc.cadReadyAt);
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);

@@ -3,14 +3,15 @@ import SamplePage from './SamplePage.jsx';
 
 /**
  * The import walkthrough, shown at the top of the assistant panel while an imported document is being built.
- * The document is already open behind it, and its operation steps appear as they are made.
+ * The document behind it stays empty until the CAD is processed and the steps are made.
  */
-export default function ImportStatus({ job, cadName, onOpenCad, onDismiss }) {
-  const done = job.stage >= 3;
+export default function ImportStatus({ job, cadName, cadReady, progress, onOpenCad, onDismiss }) {
+  const done = job.stage >= 4;
   const lines = [
-    { id: 'pages', label: job.total ? `Bringing in all ${job.total} pages` : 'Bringing in the pages' },
+    { id: 'pages', label: job.total ? `Uploading ${job.sourceName} (${job.total} pages)` : `Uploading ${job.sourceName}` },
+    { id: 'cad', label: cadReady ? `${cadName} is processed` : `Processing ${cadName} (${progress}%)` },
     { id: 'ops', label: 'Creating an operation step for each page' },
-    { id: 'cad', label: `Putting the steps on ${cadName}` },
+    { id: 'link', label: `Putting the steps on ${cadName}` },
   ];
 
   return (
@@ -24,11 +25,16 @@ export default function ImportStatus({ job, cadName, onOpenCad, onDismiss }) {
         ) : null}
       </header>
       <p className="aw6-guide-why">
-        {`Each page of ${job.sourceName} becomes one operation step, kept exactly as it looks, so nothing is lost or reworded.`}
+        {job.stage <= 1
+          ? `Your document stays empty while ${cadName} processes. Once the CAD is ready, each page becomes one operation step, kept exactly as it looks.`
+          : `Each page of ${job.sourceName} becomes one operation step, kept exactly as it looks, so nothing is lost or reworded.`}
       </p>
       <ol className="aw6-walk-lines">
         {lines.map((line, index) => {
-          const state = index < job.stage ? 'done' : index === job.stage ? 'now' : 'todo';
+          // The CAD processes alongside the upload, so its line tracks the CAD itself.
+          const state = line.id === 'cad'
+            ? (cadReady ? 'done' : 'now')
+            : index < job.stage ? 'done' : index === job.stage ? 'now' : 'todo';
           return (
             <li key={line.id} className={`is-${state}`}>
               <span className="aw6-walk-dot" aria-hidden="true">

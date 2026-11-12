@@ -268,10 +268,10 @@ export default function AssistPanel({
       </div>
       <div className="aw6-panel-body">
         {importJob && nav === 'doc' ? (
-          <ImportStatus job={importJob} cadName={doc.cadName} onOpenCad={onOpenCad} onDismiss={onDismissImport} />
+          <ImportStatus job={importJob} cadName={doc.cadName} cadReady={cadReady} progress={progress} onOpenCad={onOpenCad} onDismiss={onDismissImport} />
         ) : null}
         {blank || (importJob && nav === 'doc') ? null : guide}
-        {nav === 'doc' || blank ? (
+        {(nav === 'doc' || blank) && !(importJob && importJob.stage < 4) ? (
           <section className="aw6-starters">
             <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>
             {!cadReady ? <p className="aw6-muted">These use the model, so they unlock when the CAD is ready.</p> : null}
