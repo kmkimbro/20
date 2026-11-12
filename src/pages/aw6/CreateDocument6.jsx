@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Check, File, FileUp, Link2, Loader2, Paperclip, Upload, X,
+  File, FileUp, Link2, Paperclip, Upload, X,
 } from 'lucide-react';
 import { Button, Field, Input, Modal } from '../../design-system/index.js';
 import {
-  ONSHAPE_DOCS, SAMPLE_CAD, SAMPLE_PDF, bareName, samplePages,
+  ONSHAPE_DOCS, SAMPLE_CAD, SAMPLE_PDF, bareName,
 } from './model.js';
-import { renderPdfPages } from './pdfPages.js';
-import SamplePage from './SamplePage.jsx';
 
 function isCad(file) {
   return Boolean(file) && /\.(step|stp|iges|igs|stl|obj)(\.gz)?$/i.test(file.name);
@@ -216,58 +214,6 @@ function ImportDrop({ source, setSource, error }) {
   );
 }
 
-/* ---------- Step 3: guided walkthrough while the import runs ---------- */
-
-function Walkthrough({ source, cadName, progress, pages }) {
-  const lines = [
-    { id: 'upload', label: `Uploading ${source.name}` },
-    { id: 'pages', label: progress.total ? `Bringing in all ${progress.total} pages` : 'Bringing in every page' },
-    { id: 'ops', label: 'Creating an operation step for each page' },
-    { id: 'cad', label: `Putting the steps on ${cadName}` },
-  ];
-  return (
-    <div className="aw6-walk">
-      <p className="aw6-help">
-        Here is what happens to your document. Each page becomes one operation step in Quarter20, and the page is kept
-        exactly as it looks, so nothing is lost or reworded.
-      </p>
-      <ol className="aw6-walk-lines">
-        {lines.map((line, index) => {
-          const state = index < progress.stage ? 'done' : index === progress.stage ? 'now' : 'todo';
-          return (
-            <li key={line.id} className={`is-${state}`}>
-              <span className="aw6-walk-dot" aria-hidden="true">
-                {state === 'done' ? <Check size={12} strokeWidth={3} /> : null}
-                {state === 'now' ? <Loader2 size={12} className="aw6-spin" /> : null}
-              </span>
-              {line.label}
-            </li>
-          );
-        })}
-      </ol>
-      <div className="aw6-walk-pages" aria-label="Pages brought in">
-        {pages.map((page, index) => (
-          <figure key={index} className={index < progress.made ? 'is-op' : ''}>
-            <div className="aw6-walk-thumb">
-              {page.image ? <img src={page.image} alt="" /> : <SamplePage page={page} index={index} mini />}
-            </div>
-            <figcaption>{index < progress.made ? `Operation ${index + 1}` : `Page ${index + 1}`}</figcaption>
-          </figure>
-        ))}
-      </div>
-      {progress.stage >= lines.length ? (
-        <div className="aw6-walk-next">
-          <strong>Next: CAD View</strong>
-          <span>
-            Your steps have the pages, but no screenshots or parts from the model yet. In CAD View you pick parts and take
-            screenshots for each step, which keeps the document linked to the CAD when it changes.
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 /* ---------- The modal ---------- */
 
 export default function CreateDocument6({ open, cadLibrary, onClose, onCreate }) {
@@ -276,82 +222,30 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   const [start, setStart] = useState(null);
   const [source, setSource] = useState(null);
   const [error, setError] = useState('');
-  const [pages, setPages] = useState([]);
-  const [progress, setProgress] = useState({ stage: 0, total: 0, made: 0 });
-  const runRef = useRef(0);
 
   useEffect(() => {
     if (open) return;
-    runRef.current += 1;
     setStep('cad');
     setDraft({ name: '', cad: null });
     setStart(null);
     setSource(null);
     setError('');
-    setPages([]);
-    setProgress({ stage: 0, total: 0, made: 0 });
   }, [open]);
 
   if (!open) return null;
 
   const cadName = draft.cad?.name || SAMPLE_CAD;
   const docName = draft.name.trim() || bareName(cadName) || 'Untitled document';
-  const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
-
-  const runImport = async (src = source) => {
-    const run = runRef.current + 1;
-    runRef.current = run;
-    const alive = () => runRef.current === run;
-    setStep('walk');
-    setProgress({ stage: 0, total: 0, made: 0 });
-    let list = [];
-    await wait(900);
-    if (!alive()) return;
-    setProgress((p) => ({ ...p, stage: 1 }));
-    if (src.file) {
-      try {
-        const { images, total } = await renderPdfPages(src.file, (n, count) => {
-          if (alive()) setProgress((p) => ({ ...p, total: count }));
-        });
-        list = images.map((image) => ({ image }));
-        if (alive()) setProgress((p) => ({ ...p, total: Math.min(total, images.length) }));
-      } catch {
-        if (!alive()) return;
-        setError('That PDF could not be opened. Try another file or use the sample.');
-        setStep('start');
-        return;
-      }
-    } else {
-      list = samplePages();
-      setProgress((p) => ({ ...p, total: list.length }));
-    }
-    if (!alive()) return;
-    setPages([]);
-    for (let i = 0; i < list.length; i += 1) {
-      await wait(180);
-      if (!alive()) return;
-      setPages(list.slice(0, i + 1));
-    }
-    setProgress((p) => ({ ...p, stage: 2 }));
-    for (let i = 0; i < list.length; i += 1) {
-      await wait(260);
-      if (!alive()) return;
-      setProgress((p) => ({ ...p, made: i + 1 }));
-    }
-    setProgress((p) => ({ ...p, stage: 3 }));
-    await wait(1000);
-    if (!alive()) return;
-    setProgress((p) => ({ ...p, stage: 4 }));
-  };
-
+  // Both paths close the modal right away. An import keeps running in a status layer on the project page.
   const finish = (kind) => {
+    const src = kind === 'import' ? (source || { name: SAMPLE_PDF, sample: true }) : null;
     onCreate({
       name: docName,
       cadName,
       cadSource: draft.cad?.source || 'upload',
       start: kind,
-      sourceName: kind === 'import' ? source?.name : '',
-      pages: kind === 'import' ? pages : [],
+      sourceName: src ? src.name : '',
+      source: src,
     });
   };
 
@@ -360,7 +254,6 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   let onBack = null;
   let body = null;
   let footer = null;
-  const closable = step !== 'walk' || progress.stage >= 4;
 
   if (step === 'cad') {
     body = <CadStep draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />;
@@ -381,13 +274,8 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       />
     );
     footer = start === 'import'
-      ? <Button onClick={() => { const src = source || { name: SAMPLE_PDF, sample: true }; if (!source) setSource(src); runImport(src); }}>Import</Button>
+      ? <Button onClick={() => finish('import')}>Import</Button>
       : <Button onClick={() => finish('blank')}>Create document</Button>;
-  } else {
-    title = progress.stage >= 4 ? 'Your operation steps are ready' : 'Creating your operation steps';
-    eyebrow = source?.name;
-    body = <Walkthrough source={source} cadName={cadName} progress={progress} pages={pages} />;
-    footer = <Button disabled={progress.stage < 4} onClick={() => finish('import')}>Open document</Button>;
   }
 
   return (
@@ -397,7 +285,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       title={title}
       eyebrow={eyebrow}
       onBack={onBack}
-      onClose={closable ? onClose : undefined}
+      onClose={onClose}
       footer={footer}
       className="aw6-modal"
     >

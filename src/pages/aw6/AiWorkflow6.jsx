@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BookOpen, ChevronDown, ChevronRight, ClipboardList, FileText, Hexagon, Home, LayoutTemplate, Plug, Plus, Puzzle,
   Search, Wrench,
@@ -7,9 +7,10 @@ import Header from '../../components/Header.jsx';
 import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
 import CreateDocument6 from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
-import { pageImages } from './pdfPages.js';
+import ImportStatus from './ImportStatus.jsx';
+import { pageImages, renderPdfPages } from './pdfPages.js';
 import {
-  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, saveState, uid,
+  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
 } from './model.js';
 import '../layoutBuilder/layout-builder.css';
 import '../../design-system/tokens.css';
@@ -26,7 +27,7 @@ function NavItem({ icon, label, active, nested, onClick }) {
 }
 
 function DocTile({ doc, project, onOpen, now }) {
-  const processing = now < (doc.cadReadyAt || 0);
+  const processing = now < (doc.cadReadyAt || 0) || doc.importing;
   return (
     <button type="button" className={`lb-doc-tile${processing ? ' is-uploading' : ''}`} onClick={() => onOpen(doc.id)}>
       <div className="lb-doc-tile-thumb">
@@ -35,7 +36,7 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {processing ? `Processing ${doc.cadName} · ` : ''}
+          {doc.importing ? `Importing ${doc.sourceName} · ` : processing ? `Processing ${doc.cadName} · ` : ''}
           {doc.start === 'import' ? 'Imported · ' : ''}
           {project ? `${project} · ` : ''}
           {`Created ${doc.created}`}
@@ -48,7 +49,12 @@ function DocTile({ doc, project, onOpen, now }) {
 export default function AiWorkflow6() {
   const [state, setState] = useState(() => {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset')) resetState();
-    return loadState();
+    const loaded = loadState();
+    // An import cannot survive a reload, so finish any that were cut off.
+    return {
+      ...loaded,
+      documents: loaded.documents.map((doc) => (doc.importing ? { ...doc, importing: false } : doc)),
+    };
   });
   const [view, setView] = useState('home');
   const [activeDocId, setActiveDocId] = useState(null);
@@ -61,6 +67,8 @@ export default function AiWorkflow6() {
 
   // Re-render while a CAD is processing so the document tiles update when it is ready.
   const [now, setNow] = useState(Date.now());
+  const [importJob, setImportJob] = useState(null);
+  const jobRef = useRef(0);
   const anyProcessing = state.documents.some((doc) => (doc.cadReadyAt || 0) > now);
   useEffect(() => {
     if (!anyProcessing) return undefined;
@@ -75,6 +83,45 @@ export default function AiWorkflow6() {
     }));
   }, []);
 
+  // Runs an import in the background: the modal has already closed, and the status layer shows each stage.
+  const runImport = async (docId, source) => {
+    const run = jobRef.current + 1;
+    jobRef.current = run;
+    const alive = () => jobRef.current === run;
+    const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
+    const patchJob = (patch) => { if (alive()) setImportJob((job) => (job ? { ...job, ...patch } : job)); };
+    setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0 });
+    let list = [];
+    await wait(600);
+    if (source.file) {
+      try {
+        const { images } = await renderPdfPages(source.file, (n, count) => patchJob({ total: count }));
+        list = images.map((image) => ({ image }));
+      } catch {
+        if (!alive()) return;
+        setState((prev) => ({ ...prev, documents: prev.documents.filter((doc) => doc.id !== docId) }));
+        patchJob({ error: `${source.name} could not be opened. Try another PDF.` });
+        return;
+      }
+    } else {
+      list = samplePages();
+      await wait(900);
+    }
+    if (!alive()) return;
+    patchJob({ total: list.length, stage: 1 });
+    for (let i = 0; i < list.length; i += 1) {
+      await wait(350);
+      patchJob({ made: i + 1 });
+    }
+    if (!alive()) return;
+    patchJob({ stage: 2 });
+    await wait(900);
+    if (!alive()) return;
+    if (list.some((page) => page.image)) pageImages.set(docId, list.map((page) => page.image));
+    updateDoc(docId, { importing: false, pageCount: list.length, operations: importedOperations(list.length) });
+    patchJob({ stage: 3 });
+  };
+
   const openDoc = (id) => {
     setActiveDocId(id);
     setView('document');
@@ -82,10 +129,6 @@ export default function AiWorkflow6() {
 
   const createDoc = (draft) => {
     const id = uid('doc');
-    const pageCount = draft.pages.length;
-    if (draft.start === 'import' && draft.pages.some((page) => page.image)) {
-      pageImages.set(id, draft.pages.map((page) => page.image));
-    }
     // A CAD that is already in Quarter20 is processed; a new upload takes a while.
     const totalMs = draft.cadSource === 'library' ? 0 : CAD_READY_MS;
     const doc = {
@@ -99,8 +142,9 @@ export default function AiWorkflow6() {
       cadVisited: false,
       start: draft.start,
       sourceName: draft.sourceName,
-      pageCount,
-      operations: draft.start === 'import' ? importedOperations(pageCount) : [],
+      pageCount: 0,
+      importing: draft.start === 'import',
+      operations: [],
       bom: false,
       messages: [],
     };
@@ -112,13 +156,11 @@ export default function AiWorkflow6() {
       documents: [...prev.documents, doc],
     }));
     setCreating(false);
-    // Blank: wait on the project page while the CAD processes, then open into CAD View.
-    if (draft.start === 'blank') {
-      setNow(Date.now());
-      setView('project');
-      return;
-    }
-    openDoc(id);
+    // Both paths land on the project page while the CAD processes. Blank opens into CAD View;
+    // an import keeps running in the status layer and opens on the document when it is done.
+    setNow(Date.now());
+    setView('project');
+    if (draft.start === 'import') runImport(id, draft.source);
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);
@@ -238,6 +280,13 @@ export default function AiWorkflow6() {
           )}
         </main>
       </div>
+      <ImportStatus
+        job={importJob}
+        doc={state.documents.find((doc) => doc.id === importJob?.docId) || (importJob?.error ? {} : null)}
+        now={now}
+        onOpen={() => { const id = importJob.docId; setImportJob(null); openDoc(id); }}
+        onDismiss={() => setImportJob(null)}
+      />
       <CreateDocument6
         open={creating}
         cadLibrary={state.cadLibrary}
