@@ -125,7 +125,7 @@ function OperationSheet({ op, index, doc, onOpenCad }) {
   );
 }
 
-export default function Editor6({ document: doc, onBack, onUpdate }) {
+export default function Editor6({ document: doc, onBack, onUpdate, importJob, onDismissImport }) {
   const blank = doc.start === 'blank';
   const emptyDoc = blank && doc.operations.length === 0 && !doc.bom;
   // Blank documents open on the CAD side with the assistant closed; imports open on the document.
@@ -189,6 +189,8 @@ export default function Editor6({ document: doc, onBack, onUpdate }) {
   const panel = panelOpen ? (
     <AssistPanel
       doc={doc}
+      importJob={importJob}
+      onDismissImport={onDismissImport}
       nav={nav}
       cadReady={cadReady}
       progress={progress}

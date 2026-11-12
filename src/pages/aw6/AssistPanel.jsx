@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUp, Box, Camera, Check, ChevronDown, ChevronUp, ClipboardCheck, Hexagon, Layers, Loader2, Sparkles, X,
 } from 'lucide-react';
+import ImportStatus from './ImportStatus.jsx';
 import { generatedOperations, modelParts, samplePlan } from './model.js';
 
 const BLANK_STARTERS = [
@@ -77,7 +78,7 @@ function GuideStep({ state, title, children }) {
 }
 
 export default function AssistPanel({
-  doc, nav, cadReady, progress, activeCadOp, activeCadIndex,
+  doc, importJob, onDismissImport, nav, cadReady, progress, activeCadOp, activeCadIndex,
   onOpenCad, onOpenDoc, onCapture, onUpdate, onClose, onShowPage,
 }) {
   const [text, setText] = useState('');
@@ -266,7 +267,10 @@ export default function AssistPanel({
         </button>
       </div>
       <div className="aw6-panel-body">
-        {blank ? null : guide}
+        {importJob && nav === 'doc' ? (
+          <ImportStatus job={importJob} cadName={doc.cadName} onOpenCad={onOpenCad} onDismiss={onDismissImport} />
+        ) : null}
+        {blank || (importJob && nav === 'doc') ? null : guide}
         {nav === 'doc' || blank ? (
           <section className="aw6-starters">
             <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>

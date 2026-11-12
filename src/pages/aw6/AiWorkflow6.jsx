@@ -7,7 +7,6 @@ import Header from '../../components/Header.jsx';
 import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
 import CreateDocument6 from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
-import ImportStatus from './ImportStatus.jsx';
 import { pageImages, renderPdfPages } from './pdfPages.js';
 import {
   CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
@@ -83,14 +82,15 @@ export default function AiWorkflow6() {
     }));
   }, []);
 
-  // Runs an import in the background: the modal has already closed, and the status layer shows each stage.
+  // Runs an import after the modal closes. The document opens right away and the assistant panel shows each stage;
+  // operation steps appear in the document one by one as they are made.
   const runImport = async (docId, source) => {
     const run = jobRef.current + 1;
     jobRef.current = run;
     const alive = () => jobRef.current === run;
     const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
     const patchJob = (patch) => { if (alive()) setImportJob((job) => (job ? { ...job, ...patch } : job)); };
-    setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0 });
+    setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0, pages: [] });
     let list = [];
     await wait(600);
     if (source.file) {
@@ -108,17 +108,25 @@ export default function AiWorkflow6() {
       await wait(900);
     }
     if (!alive()) return;
-    patchJob({ total: list.length, stage: 1 });
+    if (list.some((page) => page.image)) pageImages.set(docId, list.map((page) => page.image));
+    updateDoc(docId, { pageCount: list.length });
     for (let i = 0; i < list.length; i += 1) {
-      await wait(350);
-      patchJob({ made: i + 1 });
+      await wait(160);
+      patchJob({ total: list.length, pages: list.slice(0, i + 1) });
     }
     if (!alive()) return;
+    patchJob({ stage: 1 });
+    const ops = importedOperations(list.length);
+    for (let i = 0; i < list.length; i += 1) {
+      await wait(350);
+      if (!alive()) return;
+      patchJob({ made: i + 1 });
+      updateDoc(docId, { operations: ops.slice(0, i + 1) });
+    }
     patchJob({ stage: 2 });
     await wait(900);
     if (!alive()) return;
-    if (list.some((page) => page.image)) pageImages.set(docId, list.map((page) => page.image));
-    updateDoc(docId, { importing: false, pageCount: list.length, operations: importedOperations(list.length) });
+    updateDoc(docId, { importing: false });
     patchJob({ stage: 3 });
   };
 
@@ -156,11 +164,15 @@ export default function AiWorkflow6() {
       documents: [...prev.documents, doc],
     }));
     setCreating(false);
-    // Both paths land on the project page while the CAD processes. Blank opens into CAD View;
-    // an import keeps running in the status layer and opens on the document when it is done.
+    // Blank waits on the project page while the CAD processes, then opens into CAD View.
+    // Import opens the document right away and the import runs in the assistant panel.
     setNow(Date.now());
+    if (draft.start === 'import') {
+      runImport(id, draft.source);
+      openDoc(id);
+      return;
+    }
     setView('project');
-    if (draft.start === 'import') runImport(id, draft.source);
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);
@@ -173,6 +185,8 @@ export default function AiWorkflow6() {
           document={activeDoc}
           onBack={() => { setView('home'); setActiveDocId(null); }}
           onUpdate={(patch) => updateDoc(activeDoc.id, patch)}
+          importJob={importJob?.docId === activeDoc.id ? importJob : null}
+          onDismissImport={() => setImportJob(null)}
         />
         <PrototypeSwitcher />
       </>
@@ -280,13 +294,6 @@ export default function AiWorkflow6() {
           )}
         </main>
       </div>
-      <ImportStatus
-        job={importJob}
-        doc={state.documents.find((doc) => doc.id === importJob?.docId) || (importJob?.error ? {} : null)}
-        now={now}
-        onOpen={() => { const id = importJob.docId; setImportJob(null); openDoc(id); }}
-        onDismiss={() => setImportJob(null)}
-      />
       <CreateDocument6
         open={creating}
         cadLibrary={state.cadLibrary}

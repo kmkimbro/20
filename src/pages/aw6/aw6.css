@@ -563,35 +563,12 @@
 /* A blank document is one empty page. */
 .aw6-blank-page { min-height: 1000px; }
 
-/* ---------- Import status layer (bottom right of the project page) ---------- */
-.aw6-layer {
-  position: fixed;
-  right: var(--q20-space-6);
-  bottom: var(--q20-space-6);
-  z-index: 900;
-  width: 360px;
-  max-width: calc(100vw - 32px);
-  padding: var(--q20-space-4);
-  border: 1px solid var(--q20-color-border);
-  border-radius: var(--q20-radius-lg);
-  background: var(--q20-color-surface);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
-  animation: aw6-layer-in 220ms ease-out;
-}
-@keyframes aw6-layer-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.aw6-layer-head { display: flex; align-items: center; gap: var(--q20-space-2-5); color: var(--q20-color-primary); }
-.aw6-layer-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.aw6-layer-title strong { font-size: var(--q20-font-size-sm); color: var(--q20-color-text); }
-.aw6-layer-title span { font-size: var(--q20-font-size-xs); color: var(--q20-color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.aw6-layer-head > strong { flex: 1; font-size: var(--q20-font-size-sm); color: var(--q20-color-text); }
-.aw6-layer-ok {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--q20-color-primary); color: #fff;
-}
-.aw6-layer-text { margin: var(--q20-space-3) 0 0; font-size: var(--q20-font-size-xs); line-height: var(--q20-line-height-normal); color: var(--q20-color-text-secondary); }
-.aw6-layer-next strong { color: var(--q20-color-text); }
-.aw6-layer-lines { margin: var(--q20-space-3) 0 0; gap: var(--q20-space-2); }
-.aw6-layer-lines li { font-size: var(--q20-font-size-xs); }
-.aw6-layer-foot { display: flex; justify-content: flex-end; margin-top: var(--q20-space-3); }
-.aw6-layer.is-error .aw6-layer-head { color: var(--q20-color-danger, #c62828); }
+/* ---------- Import walkthrough at the top of the assistant panel ---------- */
+.aw6-import-status .aw6-walk-lines { margin: 0; gap: var(--q20-space-2); }
+.aw6-import-status .aw6-walk-lines li { font-size: var(--q20-font-size-xs); }
+.aw6-import-status .aw6-walk-pages { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.aw6-import-status .aw6-walk-next { margin: 0; }
+.aw6-import-cad { align-self: flex-start; margin-top: var(--q20-space-2); }
+.aw6-import-status .aw6-walk-pages,
+.aw6-import-status .aw6-walk-next { background: var(--q20-color-surface); border: 1px solid var(--q20-color-border); font-size: var(--q20-font-size-xs); }
+.aw6-import-status .aw6-walk-pages { min-height: 0; padding: var(--q20-space-2); gap: var(--q20-space-2); }
