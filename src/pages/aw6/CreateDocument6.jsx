@@ -145,15 +145,13 @@ const STARTS = [
     id: 'blank',
     icon: File,
     title: 'Blank document',
-    detail: 'An empty document on your CAD, like a blank canvas. Add operations yourself, or ask the assistant in the editor to build them from the CAD.',
-    fit: 'Best when you are writing a new process.',
+    detail: 'Start empty and build your operations',
   },
   {
     id: 'import',
     icon: FileUp,
     title: 'Import a document',
-    detail: 'Bring in a work instruction you already have. We bring in every page and make each one an operation step.',
-    fit: 'Best when the instructions already exist as a PDF.',
+    detail: 'Turn an existing PDF into operation steps',
   },
 ];
 
@@ -174,12 +172,9 @@ function StartStep({ start, setStart, source, setSource, error }) {
               className={`aw6-start-row${on ? ' is-on' : ''}`}
               onClick={() => setStart(item.id)}
             >
-              <span className="aw6-start-icon" aria-hidden="true"><Icon size={18} /></span>
-              <span className="aw6-start-text">
-                <strong>{item.title}</strong>
-                <span>{item.detail}</span>
-                <em>{item.fit}</em>
-              </span>
+              <Icon size={18} aria-hidden="true" />
+              <strong>{item.title}</strong>
+              <span>{item.detail}</span>
             </button>
           );
         })}

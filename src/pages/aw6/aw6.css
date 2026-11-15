@@ -176,40 +176,29 @@
   cursor: pointer;
 }
 
-/* Start choices: two rows, read top to bottom, Blank first. */
-.aw6-start-list { display: flex; flex-direction: column; gap: var(--q20-space-2-5); }
+/* Start choices: two tiles side by side, styled like the CAD tiles below them. */
+.aw6-start-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--q20-space-3); }
 
 .aw6-start-row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: var(--q20-space-3);
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--q20-space-1-5);
+  min-height: 120px;
   padding: var(--q20-space-4);
   border: 1px solid var(--q20-color-border);
   border-radius: var(--q20-radius-md);
   background: var(--q20-color-surface);
+  color: var(--q20-color-primary);
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 .aw6-start-row:hover { border-color: var(--q20-color-border-strong); }
 .aw6-start-row.is-on { border-color: var(--q20-color-primary); background: var(--q20-color-primary-subtle); box-shadow: var(--q20-focus-ring); }
-
-.aw6-start-icon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--q20-radius-md);
-  background: var(--q20-color-surface-hover);
-  color: var(--q20-color-text-secondary);
-}
-
-.aw6-start-text { display: flex; flex-direction: column; gap: var(--q20-space-1); }
-.aw6-start-text strong { font-size: var(--q20-font-size-md); color: var(--q20-color-text); }
-.aw6-start-text span { font-size: var(--q20-font-size-sm); line-height: var(--q20-line-height-normal); color: var(--q20-color-text-lead); }
-.aw6-start-text em { font-style: normal; font-size: var(--q20-font-size-xs); color: var(--q20-color-text-muted); }
+.aw6-start-row strong { font-size: var(--q20-font-size-md); color: var(--q20-color-text); }
+.aw6-start-row span { font-size: var(--q20-font-size-xs); color: var(--q20-color-text-muted); }
 .aw6-import.is-inline { margin-top: var(--q20-space-3); }
 .aw6-import.is-inline .aw6-drop { min-height: 110px; }
 
@@ -553,6 +542,7 @@
 
 @media (max-width: 720px) {
   .aw6-cad-choice { grid-template-columns: 1fr; }
+  .aw6-start-list { grid-template-columns: 1fr; }
   .aw6-or { justify-self: center; }
 }
 
