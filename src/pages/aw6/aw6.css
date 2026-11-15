@@ -177,7 +177,7 @@
 }
 
 /* Start choices: two tiles side by side, styled like the CAD tiles below them. */
-.aw6-start-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--q20-space-3); }
+.aw6-start-list { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: var(--q20-space-3); }
 
 .aw6-start-row {
   display: flex;

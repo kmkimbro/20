@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
   File, FileUp, Link2, Paperclip, Upload, X,
 } from 'lucide-react';
@@ -160,12 +160,13 @@ function StartStep({ start, setStart, source, setSource, error }) {
     <div className="aw6-start">
       <div className="aw6-label">How do you want to start?</div>
       <div className="aw6-start-list" role="radiogroup" aria-label="How to start">
-        {STARTS.map((item) => {
+        {STARTS.map((item, index) => {
           const Icon = item.icon;
           const on = start === item.id;
           return (
+            <Fragment key={item.id}>
+            {index > 0 ? <div className="aw6-or" aria-hidden="true">or</div> : null}
             <button
-              key={item.id}
               type="button"
               role="radio"
               aria-checked={on}
@@ -176,6 +177,7 @@ function StartStep({ start, setStart, source, setSource, error }) {
               <strong>{item.title}</strong>
               <span>{item.detail}</span>
             </button>
+            </Fragment>
           );
         })}
       </div>
