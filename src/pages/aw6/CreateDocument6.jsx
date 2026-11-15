@@ -186,7 +186,7 @@ function StartStep({ start, setStart, source, setSource, error }) {
           ) : (
             <>
               <label className="aw6-drop-main">
-                <FileUp size={18} />
+                <Upload size={18} />
                 <strong>Import a document</strong>
                 <span>Click or drag a PDF here</span>
                 <input type="file" accept=".pdf,application/pdf" onChange={(event) => { take(event.target.files?.[0]); event.target.value = ''; }} />
