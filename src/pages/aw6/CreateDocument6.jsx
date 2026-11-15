@@ -185,9 +185,11 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   const [start, setStart] = useState(null);
   const [source, setSource] = useState(null);
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     if (open) return;
+    setStep(1);
     setDraft({ name: '', cad: null });
     setStart(null);
     setSource(null);
@@ -201,7 +203,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
   const kind = start === 'import' ? 'import' : 'blank';
 
-  // One step: the modal closes right away and any CAD processing or import runs in the editor.
+  // On Create the modal closes right away and any CAD processing or import runs in the editor.
   const finish = () => {
     const src = kind === 'import' ? (source || { name: SAMPLE_PDF, sample: true }) : null;
     onCreate({
@@ -220,9 +222,18 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       size="md"
       title="Create a document"
       onClose={onClose}
-      footer={<Button onClick={finish}>{kind === 'import' ? 'Import' : 'Create document'}</Button>}
+      footer={step === 1 ? (
+        <Button onClick={() => setStep(2)}>Next</Button>
+      ) : (
+        <>
+          <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
+          <Button onClick={finish} disabled={!start}>{kind === 'import' ? 'Import' : 'Create document'}</Button>
+        </>
+      )}
       className="aw6-modal"
     >
+      {/* Two steps: name and CAD first, then how to start. */}
+      {step === 1 ? (
       <div className="aw6-create">
         <Field label="Document name">
           <Input
@@ -232,6 +243,9 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
           />
         </Field>
         <CadPicker draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />
+      </div>
+      ) : (
+      <div className="aw6-create">
         <StartStep
           start={start}
           setStart={setStart}
@@ -240,6 +254,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
           error={error}
         />
       </div>
+      )}
     </Modal>
   );
 }
