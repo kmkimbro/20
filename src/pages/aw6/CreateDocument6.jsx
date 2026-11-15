@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Button, Field, Input, Modal } from '../../design-system/index.js';
 import {
-  ONSHAPE_DOCS, SAMPLE_CAD, SAMPLE_PDF, bareName,
+  ONSHAPE_DOCS, SAMPLE_PDF, bareName,
 } from './model.js';
 
 function isCad(file) {
@@ -28,21 +28,6 @@ function CadPicker({ draft, setDraft, cadLibrary }) {
 
   const cad = draft.cad;
   const uploaded = cad && (cad.source === 'upload' || cad.source === 'onshape');
-
-  if (draft.skipCad) {
-    return (
-      <div className="aw6-cad-step">
-        <div className="aw6-label-row">
-          <span className="aw6-label">CAD model</span>
-          <span className="aw6-optional">Optional</span>
-        </div>
-        <div className="aw6-cad-skipped">
-          <span>No CAD for now. You can add it any time from CAD View, and screenshots and parts will come from it.</span>
-          <button type="button" className="aw6-text-btn" onClick={() => setDraft((d) => ({ ...d, skipCad: false }))}>Add CAD now</button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="aw6-cad-step">
@@ -127,13 +112,6 @@ function CadPicker({ draft, setDraft, cadLibrary }) {
           </select>
         </div>
       </div>
-      <button
-        type="button"
-        className="aw6-text-btn aw6-skip-cad"
-        onClick={() => setDraft((d) => ({ ...d, cad: null, skipCad: true }))}
-      >
-        Skip for now
-      </button>
     </div>
   );
 }
@@ -161,7 +139,7 @@ function StartStep({ start, setStart, source, setSource, error }) {
         >
           <File size={18} aria-hidden="true" />
           <strong>Blank document</strong>
-          <span>Start empty and build your operations</span>
+          <span>Start empty and build your document</span>
         </button>
         <div className="aw6-or" aria-hidden="true">or</div>
         {/* Import works like the CAD upload: click or drop a PDF straight onto the tile. */}
@@ -188,16 +166,9 @@ function StartStep({ start, setStart, source, setSource, error }) {
               <label className="aw6-drop-main">
                 <Upload size={18} />
                 <strong>Import a document</strong>
-                <span>Click or drag a PDF here</span>
+                <span>Click and drag an existing PDF</span>
                 <input type="file" accept=".pdf,application/pdf" onChange={(event) => { take(event.target.files?.[0]); event.target.value = ''; }} />
               </label>
-              <button
-                type="button"
-                className="aw6-onshape-link"
-                onClick={() => { setSource({ name: SAMPLE_PDF, sample: true }); setStart('import'); }}
-              >
-                or use the sample PDF
-              </button>
             </>
           )}
         </div>
@@ -210,14 +181,14 @@ function StartStep({ start, setStart, source, setSource, error }) {
 /* ---------- The modal ---------- */
 
 export default function CreateDocument6({ open, cadLibrary, onClose, onCreate }) {
-  const [draft, setDraft] = useState({ name: '', cad: null, skipCad: false });
+  const [draft, setDraft] = useState({ name: '', cad: null });
   const [start, setStart] = useState(null);
   const [source, setSource] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) return;
-    setDraft({ name: '', cad: null, skipCad: false });
+    setDraft({ name: '', cad: null });
     setStart(null);
     setSource(null);
     setError('');
@@ -225,9 +196,8 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
 
   if (!open) return null;
 
-  // With nothing picked the prototype falls back to the sample CAD so it can be clicked through;
-  // Skip for now creates the document with no CAD at all.
-  const cadName = draft.skipCad ? null : (draft.cad?.name || SAMPLE_CAD);
+  // CAD is optional: with nothing picked the document starts with no CAD, and it can be added later in CAD View.
+  const cadName = draft.cad?.name || null;
   const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
   const kind = start === 'import' ? 'import' : 'blank';
 
@@ -261,6 +231,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
             onChange={(event) => setDraft((d) => ({ ...d, name: event.target.value }))}
           />
         </Field>
+        <CadPicker draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />
         <StartStep
           start={start}
           setStart={setStart}
@@ -268,7 +239,6 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
           setSource={(s) => { setError(''); setSource(s); }}
           error={error}
         />
-        <CadPicker draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />
       </div>
     </Modal>
   );
