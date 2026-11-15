@@ -9,7 +9,9 @@ import ModelStage from '../infer/ModelStage.jsx';
 import AssistPanel from './AssistPanel.jsx';
 import SamplePage from './SamplePage.jsx';
 import { pageImages } from './pdfPages.js';
-import { bareName, modelParts, samplePages, samplePlan } from './model.js';
+import {
+  CAD_READY_MS, SAMPLE_CAD, bareName, modelParts, samplePages, samplePlan,
+} from './model.js';
 
 function PlanShot({ index }) {
   const scenes = [
@@ -100,7 +102,7 @@ function OperationSheet({ op, index, doc, onOpenCad }) {
                 <span key={mark.n} className="lb-op-mark" style={{ left: mark.x, top: mark.y }}>{mark.n}</span>
               ))}
             </div>
-            <div className="lb-op-image-name">{`${index + 1}.1 · from ${doc.cadName}`}</div>
+            <div className="lb-op-image-name">{`${index + 1}.1${doc.cadName ? ` · from ${doc.cadName}` : ''}`}</div>
           </>
         ) : null}
         {op.parts?.length ? <PartsTable parts={op.parts} /> : null}
@@ -125,23 +127,52 @@ function OperationSheet({ op, index, doc, onOpenCad }) {
   );
 }
 
+function CadEmpty({ onAdd }) {
+  return (
+    <div className="aw6-cad-wait aw6-cad-empty">
+      <Box size={28} />
+      <h2>Add a CAD model</h2>
+      <p>Screenshots and parts for each step come from the CAD. It processes in the background, so you can keep working in the document.</p>
+      <label className="q20-btn q20-btn--primary q20-btn--sm aw6-cad-empty-upload">
+        Upload CAD
+        <input
+          type="file"
+          accept=".step,.stp,.iges,.igs,.stl,.obj,.gz"
+          onChange={(event) => { const file = event.target.files?.[0]; if (file) onAdd(file.name); event.target.value = ''; }}
+        />
+      </label>
+      <button type="button" className="aw6-text-btn" onClick={() => onAdd(SAMPLE_CAD)}>Use the sample model</button>
+    </div>
+  );
+}
+
 export default function Editor6({ document: doc, onBack, onUpdate, importJob, onDismissImport }) {
   const blank = doc.start === 'blank';
   // Nothing is in the document yet for a blank start, or while an import is still being brought in.
   const emptyDoc = (blank || doc.importing) && doc.operations.length === 0 && !doc.bom;
-  // Blank documents open on the CAD side with the assistant closed; imports open on the document.
+  // Blank documents open on the CAD side and imports on the document. The assistant is open either way,
+  // since it shows the CAD processing in the background.
   const [nav, setNav] = useState(blank ? 'cad' : 'doc');
-  const [panelOpen, setPanelOpen] = useState(!blank);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [cadOpId, setCadOpId] = useState(doc.operations[0]?.id || null);
   const canvasRef = useRef(null);
 
-  const cadReady = now >= (doc.cadReadyAt || 0);
+  const hasCad = Boolean(doc.cadName);
+  const cadReady = hasCad && now >= (doc.cadReadyAt || 0);
   useEffect(() => {
-    if (cadReady) return undefined;
+    if (cadReady || !hasCad) return undefined;
     const id = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(id);
-  }, [cadReady]);
+  }, [cadReady, hasCad]);
+
+  // CAD added later from CAD View processes the same way, in the background.
+  const addCad = (name) => {
+    const start = Date.now();
+    onUpdate({ cadName: name, cadReadyAt: start + CAD_READY_MS, cadTotalMs: CAD_READY_MS });
+    setNow(start);
+    setPanelOpen(true);
+  };
 
   const goCad = () => {
     setNav('cad');
@@ -169,7 +200,9 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
     noPlaceholderParts: true,
   }));
   const activeCadOp = doc.operations.find((op) => op.id === cadOpId) || doc.operations[0];
-  const progress = Math.min(100, Math.round(100 - ((doc.cadReadyAt - now) / doc.cadTotalMs) * 100));
+  const progress = hasCad
+    ? Math.max(0, Math.min(100, Math.round(100 - ((doc.cadReadyAt - now) / doc.cadTotalMs) * 100)))
+    : 0;
 
   const addOperation = () => {
     const n = doc.operations.length + 1;
@@ -195,6 +228,7 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
       nav={nav}
       cadReady={cadReady}
       progress={progress}
+      onAddCad={goCad}
       activeCadOp={activeCadOp}
       activeCadIndex={doc.operations.indexOf(activeCadOp)}
       onOpenCad={goCad}
@@ -229,6 +263,8 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
               onAddStep={addOperation}
               viewer={<ModelStage active={(activeCadOp?.parts || []).map((part) => part.name)} />}
             />
+          ) : !hasCad ? (
+            <CadEmpty onAdd={addCad} />
           ) : (
             <div className="aw6-cad-wait">
               <Box size={28} />
@@ -273,7 +309,7 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
                   <span className="aw6-cover-eyebrow">Work instruction</span>
                   <h1>{doc.name}</h1>
                   <dl>
-                    <div><dt>CAD</dt><dd>{doc.cadName}</dd></div>
+                    <div><dt>CAD</dt><dd>{doc.cadName || 'Not added yet'}</dd></div>
                     <div><dt>Created</dt><dd>{doc.created}</dd></div>
                     {doc.sourceName ? <div><dt>Imported from</dt><dd>{doc.sourceName}</dd></div> : null}
                   </dl>

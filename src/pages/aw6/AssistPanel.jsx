@@ -81,6 +81,8 @@ export default function AssistPanel({
   doc, importJob, onDismissImport, nav, cadReady, progress, activeCadOp, activeCadIndex,
   onOpenCad, onOpenDoc, onCapture, onUpdate, onClose, onShowPage,
 }) {
+  const [cadCardDismissed, setCadCardDismissed] = useState(false);
+  const hasCad = Boolean(doc.cadName);
   const [text, setText] = useState('');
   const [starter, setStarter] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -165,7 +167,9 @@ export default function AssistPanel({
         messages: [...messages, userMsg, {
           id: `m-${Date.now()}-a`,
           from: 'assistant',
-          text: `${doc.cadName} is still processing. I'll need the model to do this, so try again once CAD View is ready.`,
+          text: hasCad
+            ? `${doc.cadName} is still processing. I'll need the model to do this, so try again once CAD View is ready.`
+            : 'This needs a CAD model. Add one in CAD View and I can do it once it has processed.',
         }],
       });
       return;
@@ -186,6 +190,54 @@ export default function AssistPanel({
   const cadStatus = cadReady
     ? <span className="aw6-status is-ready">CAD ready</span>
     : <span className="aw6-status"><Loader2 size={11} className="aw6-spin" />{`Processing ${progress}%`}</span>;
+
+  // Without an import, CAD processing shows on its own card so the person can keep working while it runs.
+  const processedHere = hasCad && (doc.cadTotalMs || 0) > 1;
+  let cadCard = null;
+  if (!importJob && !hasCad) {
+    cadCard = (
+      <section className="aw6-guide aw6-cad-card" role="status">
+        <header><strong>No CAD model yet</strong></header>
+        <p className="aw6-guide-why">Screenshots and parts for each step come from the CAD. Add it whenever you are ready.</p>
+        {nav === 'doc' ? (
+          <div className="aw6-guide-actions">
+            <button type="button" className="q20-btn q20-btn--secondary q20-btn--sm" onClick={onOpenCad}>
+              <Box size={14} /> Add CAD
+            </button>
+          </div>
+        ) : null}
+      </section>
+    );
+  } else if (!importJob && processedHere && !(cadReady && cadCardDismissed)) {
+    cadCard = (
+      <section className="aw6-guide aw6-cad-card" role="status" aria-live="polite">
+        <header>
+          <strong>{cadReady ? `${doc.cadName} is ready` : `Processing ${doc.cadName}`}</strong>
+          {cadReady ? (
+            <button type="button" className="aw6-icon-btn" aria-label="Dismiss" onClick={() => setCadCardDismissed(true)}>
+              <X size={14} />
+            </button>
+          ) : null}
+        </header>
+        {cadReady ? (
+          <p className="aw6-guide-why">The model is processed. You can take screenshots and pick parts in CAD View, or ask below to build from it.</p>
+        ) : (
+          <>
+            <p className="aw6-guide-why">This runs in the background, so you can keep working. Large assemblies take a few minutes.</p>
+            <div className="aw6-bar" aria-label="CAD processing"><span style={{ width: `${Math.max(4, progress)}%` }} /></div>
+            <span className="aw6-muted">{`${progress}%`}</span>
+          </>
+        )}
+        {cadReady && nav === 'doc' ? (
+          <div className="aw6-guide-actions">
+            <button type="button" className="q20-btn q20-btn--secondary q20-btn--sm" onClick={onOpenCad}>
+              <Box size={14} /> Open CAD View
+            </button>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
 
   const guide = nav === 'cad' ? (
     <section className="aw6-guide">
@@ -270,11 +322,16 @@ export default function AssistPanel({
         {importJob && nav === 'doc' ? (
           <ImportStatus job={importJob} cadName={doc.cadName} cadReady={cadReady} progress={progress} onOpenCad={onOpenCad} onDismiss={onDismissImport} />
         ) : null}
+        {cadCard}
         {blank || (importJob && nav === 'doc') ? null : guide}
         {(nav === 'doc' || blank) && !(importJob && importJob.stage < 4) ? (
           <section className="aw6-starters">
             <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>
-            {!cadReady ? <p className="aw6-muted">These use the model, so they unlock when the CAD is ready.</p> : null}
+            {!cadReady ? (
+              <p className="aw6-muted">
+                {hasCad ? 'These use the model, so they unlock when the CAD is ready.' : 'These use the model, so they unlock once you add a CAD.'}
+              </p>
+            ) : null}
             {starters.map((item) => {
               const Icon = item.icon;
               return (

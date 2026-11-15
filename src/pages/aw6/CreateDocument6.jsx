@@ -15,9 +15,9 @@ function isPdf(file) {
   return Boolean(file) && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
 }
 
-/* ---------- Step 1: name and CAD ---------- */
+/* ---------- CAD model (optional) ---------- */
 
-function CadStep({ draft, setDraft, cadLibrary }) {
+function CadPicker({ draft, setDraft, cadLibrary }) {
   const [hot, setHot] = useState(false);
   const [onshapeOpen, setOnshapeOpen] = useState(false);
 
@@ -29,18 +29,28 @@ function CadStep({ draft, setDraft, cadLibrary }) {
   const cad = draft.cad;
   const uploaded = cad && (cad.source === 'upload' || cad.source === 'onshape');
 
+  if (draft.skipCad) {
+    return (
+      <div className="aw6-cad-step">
+        <div className="aw6-label-row">
+          <span className="aw6-label">CAD model</span>
+          <span className="aw6-optional">Optional</span>
+        </div>
+        <div className="aw6-cad-skipped">
+          <span>No CAD for now. You can add it any time from CAD View, and screenshots and parts will come from it.</span>
+          <button type="button" className="aw6-text-btn" onClick={() => setDraft((d) => ({ ...d, skipCad: false }))}>Add CAD now</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="aw6-cad-step">
-      <Field label="Document name">
-        <Input
-          value={draft.name}
-          placeholder="Untitled document"
-          onChange={(event) => setDraft((d) => ({ ...d, name: event.target.value }))}
-        />
-      </Field>
-
-      <div className="aw6-label">CAD file</div>
-      <p className="aw6-help">Every Quarter20 document is built on a CAD model. Screenshots and parts in the document come from it.</p>
+      <div className="aw6-label-row">
+        <span className="aw6-label">CAD model</span>
+        <span className="aw6-optional">Optional</span>
+      </div>
+      <p className="aw6-help">Screenshots and parts in the document come from the CAD. It processes in the background once the document opens.</p>
       <div className="aw6-cad-choice">
         <div
           className={`aw6-drop${hot ? ' is-hot' : ''}${uploaded ? ' is-filled' : ''}`}
@@ -117,11 +127,18 @@ function CadStep({ draft, setDraft, cadLibrary }) {
           </select>
         </div>
       </div>
+      <button
+        type="button"
+        className="aw6-text-btn aw6-skip-cad"
+        onClick={() => setDraft((d) => ({ ...d, cad: null, skipCad: true }))}
+      >
+        Skip for now
+      </button>
     </div>
   );
 }
 
-/* ---------- Step 2: blank or import ---------- */
+/* ---------- Blank or import ---------- */
 
 const STARTS = [
   {
@@ -143,9 +160,7 @@ const STARTS = [
 function StartStep({ start, setStart, source, setSource, error }) {
   return (
     <div className="aw6-start">
-      <p className="aw6-help">
-        Choose how to begin. Either way you end up in the document editor, where you can keep building from your CAD.
-      </p>
+      <div className="aw6-label">How do you want to start?</div>
       <div className="aw6-start-list" role="radiogroup" aria-label="How to start">
         {STARTS.map((item) => {
           const Icon = item.icon;
@@ -217,16 +232,14 @@ function ImportDrop({ source, setSource, error }) {
 /* ---------- The modal ---------- */
 
 export default function CreateDocument6({ open, cadLibrary, onClose, onCreate }) {
-  const [step, setStep] = useState('cad');
-  const [draft, setDraft] = useState({ name: '', cad: null });
+  const [draft, setDraft] = useState({ name: '', cad: null, skipCad: false });
   const [start, setStart] = useState(null);
   const [source, setSource] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (open) return;
-    setStep('cad');
-    setDraft({ name: '', cad: null });
+    setDraft({ name: '', cad: null, skipCad: false });
     setStart(null);
     setSource(null);
     setError('');
@@ -234,62 +247,51 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
 
   if (!open) return null;
 
-  const cadName = draft.cad?.name || SAMPLE_CAD;
-  const docName = draft.name.trim() || bareName(cadName) || 'Untitled document';
-  // Both paths close the modal right away. An import keeps running in a status layer on the project page.
-  const finish = (kind) => {
+  // With nothing picked the prototype falls back to the sample CAD so it can be clicked through;
+  // Skip for now creates the document with no CAD at all.
+  const cadName = draft.skipCad ? null : (draft.cad?.name || SAMPLE_CAD);
+  const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
+  const kind = start === 'import' ? 'import' : 'blank';
+
+  // One step: the modal closes right away and any CAD processing or import runs in the editor.
+  const finish = () => {
     const src = kind === 'import' ? (source || { name: SAMPLE_PDF, sample: true }) : null;
     onCreate({
       name: docName,
       cadName,
-      cadSource: draft.cad?.source || 'upload',
+      cadSource: cadName ? (draft.cad?.source || 'upload') : null,
       start: kind,
       sourceName: src ? src.name : '',
       source: src,
     });
   };
 
-  let title = 'Create a document';
-  let eyebrow = null;
-  let onBack = null;
-  let body = null;
-  let footer = null;
-
-  if (step === 'cad') {
-    body = <CadStep draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />;
-    footer = (
-      <Button onClick={() => setStep('start')}>Next</Button>
-    );
-  } else if (step === 'start') {
-    title = 'How do you want to start?';
-    eyebrow = cadName;
-    onBack = () => setStep('cad');
-    body = (
-      <StartStep
-        start={start}
-        setStart={setStart}
-        source={source}
-        setSource={(s) => { setError(''); setSource(s); }}
-        error={error}
-      />
-    );
-    footer = start === 'import'
-      ? <Button onClick={() => finish('import')}>Import</Button>
-      : <Button onClick={() => finish('blank')}>Create document</Button>;
-  }
-
   return (
     <Modal
       open
       size="md"
-      title={title}
-      eyebrow={eyebrow}
-      onBack={onBack}
+      title="Create a document"
       onClose={onClose}
-      footer={footer}
+      footer={<Button onClick={finish}>{kind === 'import' ? 'Import' : 'Create document'}</Button>}
       className="aw6-modal"
     >
-      {body}
+      <div className="aw6-create">
+        <Field label="Document name">
+          <Input
+            value={draft.name}
+            placeholder="Untitled document"
+            onChange={(event) => setDraft((d) => ({ ...d, name: event.target.value }))}
+          />
+        </Field>
+        <StartStep
+          start={start}
+          setStart={setStart}
+          source={source}
+          setSource={(s) => { setError(''); setSource(s); }}
+          error={error}
+        />
+        <CadPicker draft={draft} setDraft={setDraft} cadLibrary={cadLibrary} />
+      </div>
     </Modal>
   );
 }

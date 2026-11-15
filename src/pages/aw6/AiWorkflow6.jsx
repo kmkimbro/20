@@ -26,7 +26,7 @@ function NavItem({ icon, label, active, nested, onClick }) {
 }
 
 function DocTile({ doc, project, onOpen, now }) {
-  const processing = now < (doc.cadReadyAt || 0) || doc.importing;
+  const processing = (doc.cadName && now < (doc.cadReadyAt || 0)) || doc.importing;
   return (
     <button type="button" className={`lb-doc-tile${processing ? ' is-uploading' : ''}`} onClick={() => onOpen(doc.id)}>
       <div className="lb-doc-tile-thumb">
@@ -35,7 +35,7 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
+          {doc.cadName && now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
           {doc.start === 'import' ? 'Imported · ' : ''}
           {project ? `${project} · ` : ''}
           {`Created ${doc.created}`}
@@ -85,7 +85,7 @@ export default function AiWorkflow6() {
   // Runs an import after the modal closes, in the order it would really happen:
   // 0 upload the PDF pages, 1 wait for the CAD to finish processing, 2 make an operation step per page,
   // 3 put the steps on the CAD, 4 done. The document stays empty until the end.
-  const runImport = async (docId, source, cadReadyAt) => {
+  const runImport = async (docId, source, cadReadyAt, hasCad) => {
     const run = jobRef.current + 1;
     jobRef.current = run;
     const alive = () => jobRef.current === run;
@@ -127,7 +127,7 @@ export default function AiWorkflow6() {
     }
     if (!alive()) return;
     patchJob({ stage: 3 });
-    await wait(1500);
+    if (hasCad) await wait(1500);
     if (!alive()) return;
     updateDoc(docId, { importing: false, operations: ops });
     patchJob({ stage: 4 });
@@ -140,8 +140,8 @@ export default function AiWorkflow6() {
 
   const createDoc = (draft) => {
     const id = uid('doc');
-    // A CAD that is already in Quarter20 is processed; a new upload takes a while.
-    const totalMs = draft.cadSource === 'library' ? 0 : CAD_READY_MS;
+    // A CAD that is already in Quarter20 is processed; a new upload takes a while. No CAD means nothing to process.
+    const totalMs = !draft.cadName || draft.cadSource === 'library' ? 0 : CAD_READY_MS;
     const doc = {
       id,
       name: draft.name,
@@ -161,16 +161,17 @@ export default function AiWorkflow6() {
     };
     setState((prev) => ({
       ...prev,
-      cadLibrary: prev.cadLibrary.some((item) => item.name === draft.cadName)
+      cadLibrary: !draft.cadName || prev.cadLibrary.some((item) => item.name === draft.cadName)
         ? prev.cadLibrary
         : [...prev.cadLibrary, { id: uid('cad'), name: draft.cadName }],
       documents: [...prev.documents, doc],
     }));
     setCreating(false);
-    // Both paths land on the project page while the CAD processes (and, for an import, while the PDF is brought in).
+    // The document opens right away. CAD processing and any import run in the background,
+    // with their progress in the assistant panel.
     setNow(Date.now());
-    setView('project');
-    if (draft.start === 'import') runImport(id, draft.source, doc.cadReadyAt);
+    if (draft.start === 'import') runImport(id, draft.source, doc.cadReadyAt, Boolean(draft.cadName));
+    openDoc(id);
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);

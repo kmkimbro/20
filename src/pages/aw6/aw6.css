@@ -572,3 +572,26 @@
 .aw6-import-status .aw6-walk-pages,
 .aw6-import-status .aw6-walk-next { background: var(--q20-color-surface); border: 1px solid var(--q20-color-border); font-size: var(--q20-font-size-xs); }
 .aw6-import-status .aw6-walk-pages { min-height: 0; padding: var(--q20-space-2); gap: var(--q20-space-2); }
+
+/* ---------- One-step create modal ---------- */
+.aw6-create { display: flex; flex-direction: column; gap: var(--q20-space-5); }
+.aw6-create .aw6-start .aw6-label { margin-bottom: var(--q20-space-2); }
+.aw6-label-row { display: flex; align-items: baseline; gap: var(--q20-space-2); margin-bottom: var(--q20-space-1); }
+.aw6-label-row .aw6-label { margin: 0; }
+.aw6-optional { font-size: var(--q20-font-size-xs); color: var(--q20-color-text-muted); }
+.aw6-skip-cad { margin-top: var(--q20-space-2); }
+.aw6-cad-skipped {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--q20-space-1);
+  padding: var(--q20-space-3) var(--q20-space-4);
+  border: 1px dashed var(--q20-color-border);
+  border-radius: var(--q20-radius-md);
+  font-size: var(--q20-font-size-sm);
+  color: var(--q20-color-text-lead);
+}
+.aw6-create .aw6-label { margin-top: 0; }
+
+/* CAD processing card in the assistant panel, and the CAD View empty state */
+.aw6-cad-card .aw6-bar { width: 100%; margin-top: 0; }
+.aw6-cad-card .aw6-muted { font-size: var(--q20-font-size-xs); }
+.aw6-cad-empty-upload { position: relative; margin-top: var(--q20-space-3); cursor: pointer; }
+.aw6-cad-empty-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
