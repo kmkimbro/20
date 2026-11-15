@@ -585,3 +585,7 @@
 .aw6-cad-card .aw6-muted { font-size: var(--q20-font-size-xs); }
 .aw6-cad-empty-upload { position: relative; margin-top: var(--q20-space-3); cursor: pointer; }
 .aw6-cad-empty-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Import tile doubles as the PDF drop zone, like the CAD upload. */
+.aw6-start-drop { min-height: 120px; color: var(--q20-color-primary); }
+.aw6-start-drop > strong { font-size: var(--q20-font-size-md); color: var(--q20-color-text); }

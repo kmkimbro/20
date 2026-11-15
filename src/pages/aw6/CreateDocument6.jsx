@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   File, FileUp, Link2, Paperclip, Upload, X,
 } from 'lucide-react';
@@ -140,86 +140,67 @@ function CadPicker({ draft, setDraft, cadLibrary }) {
 
 /* ---------- Blank or import ---------- */
 
-const STARTS = [
-  {
-    id: 'blank',
-    icon: File,
-    title: 'Blank document',
-    detail: 'Start empty and build your operations',
-  },
-  {
-    id: 'import',
-    icon: FileUp,
-    title: 'Import a document',
-    detail: 'Turn an existing PDF into operation steps',
-  },
-];
-
 function StartStep({ start, setStart, source, setSource, error }) {
-  return (
-    <div className="aw6-start">
-      <div className="aw6-label">How do you want to start?</div>
-      <div className="aw6-start-list" role="radiogroup" aria-label="How to start">
-        {STARTS.map((item, index) => {
-          const Icon = item.icon;
-          const on = start === item.id;
-          return (
-            <Fragment key={item.id}>
-            {index > 0 ? <div className="aw6-or" aria-hidden="true">or</div> : null}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={on}
-              className={`aw6-start-row${on ? ' is-on' : ''}`}
-              onClick={() => setStart(item.id)}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <strong>{item.title}</strong>
-              <span>{item.detail}</span>
-            </button>
-            </Fragment>
-          );
-        })}
-      </div>
-      {start === 'import' ? <ImportDrop source={source} setSource={setSource} error={error} /> : null}
-    </div>
-  );
-}
-
-/* ---------- Inline upload shown when Import is selected ---------- */
-
-function ImportDrop({ source, setSource, error }) {
   const [hot, setHot] = useState(false);
-
   const take = (file) => {
     if (!isPdf(file)) return;
     setSource({ name: file.name, file });
+    setStart('import');
   };
+  const importOn = start === 'import';
 
   return (
-    <div className="aw6-import is-inline">
-      <div
-        className={`aw6-drop${hot ? ' is-hot' : ''}${source ? ' is-filled' : ''}`}
-        onDragOver={(event) => { event.preventDefault(); setHot(true); }}
-        onDragLeave={() => setHot(false)}
-        onDrop={(event) => { event.preventDefault(); setHot(false); take(event.dataTransfer.files?.[0]); }}
-      >
-        {source ? (
-          <div className="aw6-file-chip">
-            <Paperclip size={14} />
-            <span>{source.name}</span>
-            <button type="button" aria-label="Remove document" onClick={() => setSource(null)}>
-              <X size={12} />
-            </button>
-          </div>
-        ) : (
-          <label className="aw6-drop-main">
-            <Upload size={18} />
-            <strong>Upload a PDF</strong>
-            <span>Click or drag your work instruction here. Every page comes in as an operation step.</span>
-            <input type="file" accept=".pdf,application/pdf" onChange={(event) => { take(event.target.files?.[0]); event.target.value = ''; }} />
-          </label>
-        )}
+    <div className="aw6-start">
+      <div className="aw6-label">How do you want to start?</div>
+      <div className="aw6-start-list">
+        <button
+          type="button"
+          aria-pressed={start === 'blank'}
+          className={`aw6-start-row${start === 'blank' ? ' is-on' : ''}`}
+          onClick={() => setStart('blank')}
+        >
+          <File size={18} aria-hidden="true" />
+          <strong>Blank document</strong>
+          <span>Start empty and build your operations</span>
+        </button>
+        <div className="aw6-or" aria-hidden="true">or</div>
+        {/* Import works like the CAD upload: click or drop a PDF straight onto the tile. */}
+        <div
+          className={`aw6-drop aw6-start-drop${hot ? ' is-hot' : ''}${importOn ? ' is-filled' : ''}`}
+          onDragOver={(event) => { event.preventDefault(); setHot(true); }}
+          onDragLeave={() => setHot(false)}
+          onDrop={(event) => { event.preventDefault(); setHot(false); take(event.dataTransfer.files?.[0]); }}
+        >
+          {importOn && source ? (
+            <>
+              <FileUp size={18} aria-hidden="true" />
+              <strong>Import a document</strong>
+              <div className="aw6-file-chip">
+                <Paperclip size={14} />
+                <span>{source.name}</span>
+                <button type="button" aria-label="Remove document" onClick={() => { setSource(null); setStart(null); }}>
+                  <X size={12} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="aw6-drop-main">
+                <FileUp size={18} />
+                <strong>Import a document</strong>
+                <span>Click or drag a PDF here</span>
+                <input type="file" accept=".pdf,application/pdf" onChange={(event) => { take(event.target.files?.[0]); event.target.value = ''; }} />
+              </label>
+              <button
+                type="button"
+                className="aw6-onshape-link"
+                onClick={() => { setSource({ name: SAMPLE_PDF, sample: true }); setStart('import'); }}
+              >
+                or use the sample PDF
+              </button>
+            </>
+          )}
+        </div>
       </div>
       {error ? <p className="aw6-error">{error}</p> : null}
     </div>
