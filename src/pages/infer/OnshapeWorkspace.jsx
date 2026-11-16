@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Box, ChevronLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Box, ChevronLeft, Upload } from 'lucide-react';
 import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
 import ModelStage from './ModelStage.jsx';
 import CreateDocumentDialog from '../magicParser/CreateDocumentDialog.jsx';
@@ -31,12 +31,14 @@ const INSTANCES = [
 
 export default function OnshapeWorkspace({
   onOpenDocument, referenceCreate = false, onUseCad, parseSetup = false, cadTypes = false,
-  renderStart = null,
+  renderStart = null, uploadStep = false,
 }) {
   const [cadName, setCadName] = useState('');
   const [allowNew, setAllowNew] = useState(false);
   const [creating, setCreating] = useState(false);
   const [detailTitle, setDetailTitle] = useState('');
+  // uploadStep: Upload New CAD opens a file upload first. Only once the CAD is uploaded does "New document" show.
+  const [uploading, setUploading] = useState(null); // null | { name: '' } picking | { name } uploading
 
   const upload = (allowNewDocument) => {
     setCadName(MODEL_FILE);
@@ -44,6 +46,16 @@ export default function OnshapeWorkspace({
     setCreating(false);
     setDetailTitle('');
   };
+
+  useEffect(() => {
+    if (!uploading?.name) return undefined;
+    const timer = setTimeout(() => {
+      setCadName(uploading.name);
+      setAllowNew(true);
+      setUploading(null);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [uploading?.name]);
 
   const openDetails = (title) => {
     if (parseSetup) {
@@ -80,7 +92,41 @@ export default function OnshapeWorkspace({
         </div>
         <aside className="os-panel">
           <div className="os-panel-mark"><Box size={18} /></div>
-          {detailTitle ? (
+          {uploading ? (
+            <div className="os-create">
+              <button type="button" className="os-back" onClick={() => setUploading(null)}>
+                <ChevronLeft size={14} />
+                Documents
+              </button>
+              <p className="os-file">Upload New CAD</p>
+              {uploading.name ? (
+                <div className="aw6-drop is-filled">
+                  <strong>Uploading {uploading.name}</strong>
+                  <div className="lb-upload-track" style={{ width: '80%' }}><span /></div>
+                </div>
+              ) : (
+                <div className="aw6-drop">
+                  <label className="aw6-drop-main">
+                    <Upload size={18} />
+                    <strong>Upload new CAD</strong>
+                    <span>Click or drag a STEP file here</span>
+                    <input
+                      type="file"
+                      accept=".step,.stp,.iges,.igs,.stl,.obj,.gz"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = '';
+                        if (file) setUploading({ name: file.name });
+                      }}
+                    />
+                  </label>
+                  <button type="button" className="aw6-onshape-link" onClick={() => setUploading({ name: MODEL_FILE })}>
+                    or use this model
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : detailTitle ? (
             <div className="os-create">
               <button type="button" className="os-back" onClick={() => setDetailTitle('')}>
                 <ChevronLeft size={14} />
@@ -135,7 +181,7 @@ export default function OnshapeWorkspace({
             </div>
           ) : (
             <>
-              <button type="button" className="os-action" onClick={() => upload(true)}>Upload New CAD</button>
+              <button type="button" className="os-action" onClick={() => (uploadStep ? setUploading({ name: '' }) : upload(true))}>Upload New CAD</button>
               {onUseCad ? null : (
                 <button type="button" className="os-action" onClick={() => upload(false)}>Update CAD</button>
               )}

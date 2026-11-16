@@ -220,6 +220,7 @@ export default function AiWorkflow6() {
       <>
         <OnshapeWorkspace
           parseSetup
+          uploadStep
           renderStart={({ title, cadName }) => (
             <OnshapeStart key={title} title={title} cadName={cadName} onCreate={createFromOnshape} />
           )}
