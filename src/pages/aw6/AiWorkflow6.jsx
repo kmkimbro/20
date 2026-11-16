@@ -207,7 +207,7 @@ export default function AiWorkflow6() {
           <div className="aw3-start-actions">
             <button type="button" onClick={() => setEntry('onshape')}>from onshape/SW</button>
             {/* From Quarter20 lands on Home with the new Create a document modal open. */}
-            <button type="button" onClick={() => { setEntry('q20'); setCreating(true); }}>from q20</button>
+            <button type="button" onClick={() => setEntry('q20')}>from q20</button>
           </div>
         </div>
         <PrototypeSwitcher />

@@ -81,8 +81,8 @@ const pos = (c, r) => ({ x: OX + c * CW, y: OY + r * RH });
 // id, image, title, caption, col, row
 const F = [
   ['start', 'q-start', 'Start', 'Prototype entry', 0, 1],
-  ['s1', 'q-step1', 'Create · step 1', 'Upload the CAD (required)', 1, 1],
-  ['s1c', 'q-step1-cad', 'Step 1 · CAD attached', 'Next stays on; no CAD uses the sample', 2, 1],
+  ['home', 'q-home', 'Home', 'Click New document', 1, 1],
+  ['s1c', 'q-step1-cad', 'Create · step 1', 'Upload the CAD (required) · no CAD uses the sample', 2, 1],
   ['s2', 'q-step2', 'Create · step 2', 'Blank or Import', 3, 1],
 
   ['bl1', 'bl-picked', 'Blank document', 'Selected · Create document', 4, 0],
@@ -107,7 +107,7 @@ const F = [
   ['os7', 'os-card', 'Quarter20 · project card', 'Opens in a new tab', 7, 5],
 ];
 const E = [
-  ['start','s1'],['s1','s1c'],['s1c','s2'],
+  ['start','home'],['home','s1c'],['s1c','s2'],
   ['s2','bl1'],['s2','im1'],
   ['bl1','bl2'],['bl2','bl3'],['bl3','bl4'],
   ['im1','im2'],['im2','im3'],['im3','im4'],
@@ -130,7 +130,7 @@ function addEl(cls, x, y, html, w) {
   const el = document.createElement('div'); el.className = cls; el.style.left = x + 'px'; el.style.top = y + 'px';
   if (w) el.style.width = w + 'px'; el.innerHTML = html; board.appendChild(el); return el;
 }
-addEl('lane', OX, OY + RH - 170, 'Start in Quarter20<small>Two-step modal: upload the CAD, then Blank or Import</small>');
+addEl('lane', OX, OY + RH - 170, 'Start in Quarter20<small>Land on Home, then New document opens the two-step modal</small>');
 addEl('lane', OX + 4 * CW, OY - 200, 'After the modal you land on the project<small>The card shows the CAD processing; it never jumps straight into the editor</small>');
 addEl('lane', OX + CW, OY + 5 * RH - 150, 'Start in Onshape / SolidWorks<small>Upload New CAD first, then New document, then the same Blank or Import choice</small>');
 addEl('note', OX + 8 * CW, OY + 2 * RH + 20,
