@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Button, Field, Input, Modal } from '../../design-system/index.js';
 import {
-  ONSHAPE_DOCS, SAMPLE_PDF, bareName,
+  ONSHAPE_DOCS, SAMPLE_CAD, SAMPLE_PDF, bareName,
 } from './model.js';
 
 function isCad(file) {
@@ -197,8 +197,9 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
 
   if (!open) return null;
 
-  // A document always has a CAD: Next stays off until one is uploaded or linked.
-  const cadName = draft.cad?.name || null;
+  // A document always has a CAD. Next stays on so the prototype can be clicked straight through:
+  // with nothing picked, the sample model is uploaded for you and processes like any new CAD.
+  const cadName = draft.cad?.name || SAMPLE_CAD;
   const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
   const kind = start === 'import' ? 'import' : 'blank';
 
@@ -222,7 +223,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       title="Create a document"
       onClose={onClose}
       footer={step === 1 ? (
-        <Button disabled={!cadName} onClick={() => setStep(2)}>Next</Button>
+        <Button onClick={() => setStep(2)}>Next</Button>
       ) : (
         <>
           <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
