@@ -56,6 +56,7 @@ const ASSEMBLY_TREE = [
 function getStepItems(op) {
   const parts = op.parts || [];
   if (parts.length > 0) return parts.map((p) => p.name);
+  if (op.noPlaceholderParts) return [];
   return Array.from({ length: 3 }, (_, i) => 'Blade');
 }
 
