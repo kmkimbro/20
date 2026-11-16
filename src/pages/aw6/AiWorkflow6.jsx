@@ -37,10 +37,13 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {doc.cadName && now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
-          {doc.start === 'import' ? 'Imported · ' : ''}
-          {project ? `${project} · ` : ''}
-          {`Created ${doc.created}`}
+          {processing ? 'Creating document' : (
+            <>
+              {doc.start === 'import' ? 'Imported · ' : ''}
+              {project ? `${project} · ` : ''}
+              {`Created ${doc.created}`}
+            </>
+          )}
         </div>
       </div>
     </button>
@@ -142,7 +145,7 @@ export default function AiWorkflow6() {
     setView('document');
   };
 
-  const createDoc = (draft) => {
+  const createDoc = (draft, { openNow = true } = {}) => {
     const id = uid('doc');
     // A CAD that is already in Quarter20 is processed; a new upload takes a while. No CAD means nothing to process.
     const totalMs = !draft.cadName || draft.cadSource === 'library' ? 0 : CAD_READY_MS;
@@ -175,7 +178,15 @@ export default function AiWorkflow6() {
     // with their progress in the assistant panel.
     setNow(Date.now());
     if (draft.start === 'import') runImport(id, draft.source, doc.cadReadyAt, Boolean(draft.cadName));
-    openDoc(id);
+    if (openNow) openDoc(id);
+  };
+
+  // From the Onshape panel, Done hands off to Quarter20: the project page shows the new document
+  // tile with its upload bar while the CAD is read, and the person opens it from there.
+  const createFromOnshape = (draft) => {
+    createDoc(draft, { openNow: false });
+    setEntry('q20');
+    setView('project');
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);
@@ -197,13 +208,12 @@ export default function AiWorkflow6() {
   }
 
   if (entry === 'onshape' && view !== 'document') {
-    // A document started from the Onshape panel opens in the same editor, with its CAD processing in the background.
     return (
       <>
         <OnshapeWorkspace
           parseSetup
           renderStart={({ title, cadName }) => (
-            <OnshapeStart key={title} title={title} cadName={cadName} onCreate={createDoc} />
+            <OnshapeStart key={title} title={title} cadName={cadName} onCreate={createFromOnshape} />
           )}
           onOpenDocument={() => {}}
         />
