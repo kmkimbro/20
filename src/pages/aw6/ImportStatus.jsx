@@ -55,14 +55,12 @@ export default function ImportStatus({ job, cadName, cadReady, progress, onOpenC
       </ol>
       {done ? (
         <div className="aw6-walk-next">
-          <strong>{hasCad ? 'Next: CAD View' : 'Next: add a CAD model'}</strong>
+          <strong>Next: CAD View</strong>
           <span>
-            {hasCad
-              ? 'Your steps have the pages, but no screenshots or parts from the model yet. In CAD View you pick parts and take screenshots for each step, which keeps the document linked to the CAD when it changes.'
-              : 'Your steps have the pages. Add a CAD model in CAD View to take screenshots and pick parts for each step.'}
+            Your steps have the pages, but no screenshots or parts from the model yet. In CAD View you pick parts and take screenshots for each step, which keeps the document linked to the CAD when it changes.
           </span>
           <button type="button" className="q20-btn q20-btn--secondary q20-btn--sm aw6-import-cad" onClick={onOpenCad}>
-            <Box size={14} /> {hasCad ? 'Open CAD View' : 'Add CAD'}
+            <Box size={14} /> Open CAD View
           </button>
         </div>
       ) : null}

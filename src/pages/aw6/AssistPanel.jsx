@@ -194,21 +194,7 @@ export default function AssistPanel({
   // Without an import, CAD processing shows on its own card so the person can keep working while it runs.
   const processedHere = hasCad && (doc.cadTotalMs || 0) > 1;
   let cadCard = null;
-  if (!importJob && !hasCad) {
-    cadCard = (
-      <section className="aw6-guide aw6-cad-card" role="status">
-        <header><strong>No CAD model yet</strong></header>
-        <p className="aw6-guide-why">Screenshots and parts for each step come from the CAD. Add it whenever you are ready.</p>
-        {nav === 'doc' ? (
-          <div className="aw6-guide-actions">
-            <button type="button" className="q20-btn q20-btn--secondary q20-btn--sm" onClick={onOpenCad}>
-              <Box size={14} /> Add CAD
-            </button>
-          </div>
-        ) : null}
-      </section>
-    );
-  } else if (!importJob && processedHere && !(cadReady && cadCardDismissed)) {
+  if (!importJob && processedHere && !(cadReady && cadCardDismissed)) {
     cadCard = (
       <section className="aw6-guide aw6-cad-card" role="status" aria-live="polite">
         <header>
@@ -329,7 +315,7 @@ export default function AssistPanel({
             <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>
             {!cadReady ? (
               <p className="aw6-muted">
-                {hasCad ? 'These use the model, so they unlock when the CAD is ready.' : 'These use the model, so they unlock once you add a CAD.'}
+                These use the model, so they unlock when the CAD is ready.
               </p>
             ) : null}
             {starters.map((item) => {

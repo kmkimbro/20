@@ -280,7 +280,7 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
                   <span className="aw6-cover-eyebrow">Work instruction</span>
                   <h1>{doc.name}</h1>
                   <dl>
-                    <div><dt>CAD</dt><dd>{doc.cadName || 'Not added yet'}</dd></div>
+                    <div><dt>CAD</dt><dd>{doc.cadName}</dd></div>
                     <div><dt>Created</dt><dd>{doc.created}</dd></div>
                     {doc.sourceName ? <div><dt>Imported from</dt><dd>{doc.sourceName}</dd></div> : null}
                   </dl>

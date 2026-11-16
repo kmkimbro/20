@@ -11,7 +11,7 @@ import CreateDocument6, { OnshapeStart } from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
 import { pageImages, renderPdfPages } from './pdfPages.js';
 import {
-  CAD_READY_MS, SAMPLE_CAD, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
+  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
 } from './model.js';
 import '../layoutBuilder/layout-builder.css';
 import '../../design-system/tokens.css';
@@ -57,11 +57,10 @@ export default function AiWorkflow6() {
     // An import cannot survive a reload, so finish any that were cut off.
     return {
       ...loaded,
-      documents: loaded.documents.map((doc) => ({
-        ...doc,
-        importing: false,
-        ...(doc.cadName ? {} : { cadName: SAMPLE_CAD, cadReadyAt: 0, cadTotalMs: 1 }),
-      })),
+      // A document cannot exist without a CAD, so drop any saved by an earlier build without one.
+      documents: loaded.documents
+        .filter((doc) => doc.cadName)
+        .map((doc) => (doc.importing ? { ...doc, importing: false } : doc)),
     };
   });
   const [view, setView] = useState('home');
@@ -149,10 +148,8 @@ export default function AiWorkflow6() {
     setView('document');
   };
 
-  const createDoc = (picked, { openNow = true } = {}) => {
+  const createDoc = (draft, { openNow = true } = {}) => {
     const id = uid('doc');
-    // Every document has a CAD. With none picked, the sample model from the library is used.
-    const draft = picked.cadName ? picked : { ...picked, cadName: SAMPLE_CAD, cadSource: 'library' };
     // A CAD that is already in Quarter20 is processed; a new upload takes a while. No CAD means nothing to process.
     const totalMs = !draft.cadName || draft.cadSource === 'library' ? 0 : CAD_READY_MS;
     const doc = {

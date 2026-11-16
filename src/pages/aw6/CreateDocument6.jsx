@@ -15,7 +15,7 @@ function isPdf(file) {
   return Boolean(file) && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
 }
 
-/* ---------- CAD model (optional) ---------- */
+/* ---------- CAD model (required) ---------- */
 
 function CadPicker({ draft, setDraft, cadLibrary }) {
   const [hot, setHot] = useState(false);
@@ -33,7 +33,6 @@ function CadPicker({ draft, setDraft, cadLibrary }) {
     <div className="aw6-cad-step">
       <div className="aw6-label-row">
         <span className="aw6-label">CAD model</span>
-        <span className="aw6-optional">Optional</span>
       </div>
       <p className="aw6-help">Screenshots and parts in the document come from the CAD. It processes in the background once the document opens.</p>
       <div className="aw6-cad-choice">
@@ -198,7 +197,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
 
   if (!open) return null;
 
-  // CAD is optional: with nothing picked the document starts with no CAD, and it can be added later in CAD View.
+  // A document always has a CAD: Next stays off until one is uploaded or linked.
   const cadName = draft.cad?.name || null;
   const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
   const kind = start === 'import' ? 'import' : 'blank';
@@ -209,7 +208,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
     onCreate({
       name: docName,
       cadName,
-      cadSource: cadName ? (draft.cad?.source || 'upload') : null,
+      cadSource: draft.cad?.source || 'upload',
       start: kind,
       sourceName: src ? src.name : '',
       source: src,
@@ -223,7 +222,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       title="Create a document"
       onClose={onClose}
       footer={step === 1 ? (
-        <Button onClick={() => setStep(2)}>Next</Button>
+        <Button disabled={!cadName} onClick={() => setStep(2)}>Next</Button>
       ) : (
         <>
           <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
