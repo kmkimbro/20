@@ -204,6 +204,14 @@ export const PROTOTYPES = [
     file: true,
   },
   {
+    id: 'ai-workflow-6-flow',
+    title: 'AI workflow 6 flow',
+    description:
+      'Flow diagram of AI workflow 6: the Quarter20 two-step modal, Blank and Import branches, the project card stages (Processing CAD, Parsing document, Complete) and what clicking the card shows at each, plus the Onshape path. Pan, zoom, and click a screen to enlarge it.',
+    path: '/flows/ai-workflow-6/index.html',
+    file: true,
+  },
+  {
     id: 'assembly-plan',
     title: 'Assembly plan',
     description:
