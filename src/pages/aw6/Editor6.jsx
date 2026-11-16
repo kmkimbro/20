@@ -150,8 +150,8 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
   const blank = doc.start === 'blank';
   // Nothing is in the document yet for a blank start, or while an import is still being brought in.
   const emptyDoc = (blank || doc.importing) && doc.operations.length === 0 && !doc.bom;
-  // Blank documents open on the CAD side and imports on the document. The assistant is open either way,
-  // since it shows the CAD processing in the background.
+  // Blank documents open on the CAD side and imports on the document. The assistant shows only on the
+  // Document side; CAD View shows its own processing state.
   const [nav, setNav] = useState(blank ? 'cad' : 'doc');
   const [panelOpen, setPanelOpen] = useState(true);
   const [now, setNow] = useState(Date.now());
@@ -240,14 +240,15 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
     />
   ) : null;
 
+  // The assistant lives on the Document side only; from CAD View its button takes you there.
   return (
     <div className="lb-app aw6-editor">
       <Header
         navActive={nav}
         onNavChange={(next) => (next === 'cad' ? goCad() : next === 'doc' ? goDoc() : setNav(next))}
         onBack={onBack}
-        onPrompts={() => setPanelOpen((open) => !open)}
-        promptsActive={panelOpen}
+        onPrompts={() => (nav === 'cad' ? goDoc() : setPanelOpen((open) => !open))}
+        promptsActive={panelOpen && nav !== 'cad'}
       />
       {nav === 'cad' ? (
         <div className="lb-cad-host">
@@ -273,7 +274,6 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
               <div className="aw6-bar" aria-label="CAD processing"><span style={{ width: `${Math.max(4, progress)}%` }} /></div>
             </div>
           )}
-          {panel}
         </div>
       ) : (
         <div className="lb-doc">
