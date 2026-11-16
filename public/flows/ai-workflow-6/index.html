@@ -88,15 +88,15 @@ const F = [
   ['bl1', 'bl-picked', 'Blank document', 'Selected · Create document', 4, 0],
   ['bl2', 'bl-card-cad', 'Project card', 'Processing CAD', 5, 0],
   ['bl3', 'bl-open-cad', 'Click the card', 'CAD loading screen', 6, 0],
-  ['bl4', 'bl-cad-ready', 'CAD ready', 'Blank document, CAD View', 7, 0],
+  ['bl4', 'bl-cad-ready', 'CAD ready', 'Document opens with the assistant: summary + prompts', 7, 0],
 
   ['im1', 'im-picked', 'Import a document', 'PDF attached · Import', 4, 2],
   ['im2', 'im-card-cad', 'Card · Processing CAD', 'First stage, about 15s', 5, 2],
   ['im3', 'im-card-parse', 'Card · Parsing document', 'Starts once the CAD is ready', 6, 2],
   ['im4', 'im-card-done', 'Card · Complete', 'Runs on its own if not clicked', 7, 2],
   ['im2o', 'im-open-cad', 'Click while processing', 'CAD loading screen', 5, 3],
-  ['im3o', 'im-open-parse', 'Click while parsing', 'Assistant shows the import steps', 6, 3],
-  ['im4o', 'im-open-done', 'Click when complete', 'Finished document', 7, 3],
+  ['im3o', 'im-open-parse', 'Click while parsing', 'Assistant opens with the import steps', 6, 3],
+  ['im4o', 'im-open-done', 'Click when complete', 'Assistant: what happened, next step, prompts', 7, 3],
 
   ['os1', 'os-workspace', 'Onshape / SolidWorks', 'Plugin panel', 1, 5],
   ['os2', 'os-upload', 'Upload New CAD', 'Opens the CAD upload', 2, 5],
@@ -136,7 +136,7 @@ addEl('lane', OX + CW, OY + 5 * RH - 150, 'Start in Onshape / SolidWorks<small>U
 addEl('note', OX + 8 * CW, OY + 2 * RH + 20,
   '<b>Import card stages</b>Processing CAD → Parsing document → Complete. The card advances by itself; clicking it at any stage opens what is shown below that stage.', 420);
 addEl('note', OX + 8 * CW, OY + 20,
-  '<b>Blank document</b>Only an explicit Blank pick starts blank. Anything else, including no pick, runs the import with the sample PDF.', 420);
+  '<b>Blank document</b>Only an explicit Blank pick starts blank. Anything else, including no pick, runs the import with the sample PDF. Once the CAD is ready, the document opens with the assistant showing what happened, the next step, and sample prompts.', 420);
 addEl('note', OX + 8 * CW, OY + 5 * RH + 20,
   '<b>Done opens a new tab</b>In the real product, Done opens Quarter20 in a new browser tab. The prototype stays in one tab. From the project card, the import continues with the same three card stages as above.', 420);
 

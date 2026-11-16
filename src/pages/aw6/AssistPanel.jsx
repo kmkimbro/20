@@ -225,6 +225,40 @@ export default function AssistPanel({
     );
   }
 
+  // A blank document gets the same kind of summary an import gets: what happened, then what to do next.
+  if (blank && cadReady && nav === 'doc' && !cadCardDismissed) {
+    cadCard = (
+      <section className="aw6-guide aw6-import-status" role="status" aria-live="polite">
+        <header>
+          <strong>Your document is ready</strong>
+          <button type="button" className="aw6-icon-btn" aria-label="Dismiss" onClick={() => setCadCardDismissed(true)}>
+            <X size={14} />
+          </button>
+        </header>
+        <p className="aw6-guide-why">
+          {`${doc.name || 'Your document'} is a blank document built on ${doc.cadName}, so everything you add can come from the model.`}
+        </p>
+        <ol className="aw6-walk-lines">
+          {(hasCad ? [`${doc.cadName} is processed`] : []).concat(['Blank document created']).map((label) => (
+            <li key={label} className="is-done">
+              <span className="aw6-walk-dot" aria-hidden="true"><Check size={12} strokeWidth={3} /></span>
+              {label}
+            </li>
+          ))}
+        </ol>
+        <div className="aw6-walk-next">
+          <strong>Next: build it from your CAD</strong>
+          <span>
+            Pick a prompt below and I will build it from the model for you, or open CAD View to pick parts and take screenshots yourself.
+          </span>
+          <button type="button" className="q20-btn q20-btn--secondary q20-btn--sm aw6-import-cad" onClick={onOpenCad}>
+            <Box size={14} /> Open CAD View
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   const guide = nav === 'cad' ? (
     <section className="aw6-guide">
       <header>

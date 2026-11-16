@@ -133,7 +133,7 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
   const emptyDoc = (blank || doc.importing) && doc.operations.length === 0 && !doc.bom;
   // Blank documents open on the CAD side. An import opens on the CAD loading screen while the CAD
   // still processes, and on the document (with its parsing progress in the assistant) after that.
-  const [nav, setNav] = useState(blank || Date.now() < (doc.cadReadyAt || 0) ? 'cad' : 'doc');
+  const [nav, setNav] = useState(Date.now() < (doc.cadReadyAt || 0) ? 'cad' : 'doc');
   const [panelOpen, setPanelOpen] = useState(true);
   const [now, setNow] = useState(Date.now());
   const [cadOpId, setCadOpId] = useState(doc.operations[0]?.id || null);
@@ -149,7 +149,7 @@ export default function Editor6({ document: doc, onBack, onUpdate, importJob, on
 
   // When the CAD finishes while an import waits on the loading screen, move on to the document parsing.
   useEffect(() => {
-    if (cadReady && doc.importing && nav === 'cad') setNav('doc');
+    if (cadReady && (doc.importing || blank) && nav === 'cad') setNav('doc');
   }, [cadReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goCad = () => {
