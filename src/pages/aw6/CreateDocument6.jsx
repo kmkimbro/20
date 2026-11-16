@@ -227,7 +227,7 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       ) : (
         <>
           <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
-          <Button onClick={finish} disabled={!start}>{kind === 'import' ? 'Import' : 'Create document'}</Button>
+          <Button onClick={finish}>{kind === 'import' ? 'Import' : 'Create document'}</Button>
         </>
       )}
       className="aw6-modal"
