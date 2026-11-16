@@ -201,7 +201,8 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
   // with nothing picked, the sample model is uploaded for you and processes like any new CAD.
   const cadName = draft.cad?.name || SAMPLE_CAD;
   const docName = draft.name.trim() || (cadName ? bareName(cadName) : '') || 'Untitled document';
-  const kind = start === 'import' ? 'import' : 'blank';
+  // Only an explicit Blank pick starts blank. Anything else runs the import, with the sample PDF if no file was dropped.
+  const kind = start === 'blank' ? 'blank' : 'import';
 
   // On Create the modal closes right away and any CAD processing or import runs in the editor.
   const finish = () => {
@@ -264,7 +265,8 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
 export function OnshapeStart({ title, cadName, onCreate }) {
   const [start, setStart] = useState(null);
   const [source, setSource] = useState(null);
-  const kind = start === 'import' ? 'import' : 'blank';
+  // Only an explicit Blank pick starts blank. Anything else runs the import, with the sample PDF if no file was dropped.
+  const kind = start === 'blank' ? 'blank' : 'import';
   // Same layout as the AI workflow 5 panel: a heading, the choices, then Done on the right.
   return (
     <div className="aw6-os-start">
@@ -280,8 +282,8 @@ export function OnshapeStart({ title, cadName, onCreate }) {
             cadName,
             cadSource: 'onshape',
             start: kind,
-            sourceName: kind === 'import' && source ? source.name : '',
-            source: kind === 'import' ? source : null,
+            sourceName: kind === 'import' ? (source || { name: SAMPLE_PDF }).name : '',
+            source: kind === 'import' ? (source || { name: SAMPLE_PDF, sample: true }) : null,
           })}
         >
           Done
