@@ -118,7 +118,7 @@ function CadPicker({ draft, setDraft, cadLibrary }) {
 
 /* ---------- Blank or import ---------- */
 
-function StartStep({ start, setStart, source, setSource, error }) {
+export function StartStep({ start, setStart, source, setSource, error }) {
   const [hot, setHot] = useState(false);
   const take = (file) => {
     if (!isPdf(file)) return;
@@ -256,5 +256,31 @@ export default function CreateDocument6({ open, cadLibrary, onClose, onCreate })
       </div>
       )}
     </Modal>
+  );
+}
+
+/* ---------- The same "How do you want to start?" step, inside the Onshape panel ---------- */
+
+export function OnshapeStart({ title, cadName, onCreate }) {
+  const [start, setStart] = useState(null);
+  const [source, setSource] = useState(null);
+  const kind = start === 'import' ? 'import' : 'blank';
+  return (
+    <div className="aw6-os-start">
+      <StartStep start={start} setStart={setStart} source={source} setSource={setSource} error="" />
+      <Button
+        block
+        onClick={() => onCreate({
+          name: title,
+          cadName,
+          cadSource: 'onshape',
+          start: kind,
+          sourceName: kind === 'import' && source ? source.name : '',
+          source: kind === 'import' ? source : null,
+        })}
+      >
+        {kind === 'import' ? 'Import' : 'Create document'}
+      </Button>
+    </div>
   );
 }

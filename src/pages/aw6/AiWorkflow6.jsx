@@ -7,11 +7,11 @@ import Header from '../../components/Header.jsx';
 import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
 import OnshapeWorkspace from '../infer/OnshapeWorkspace.jsx';
 import '../infer/infer.css';
-import CreateDocument6 from './CreateDocument6.jsx';
+import CreateDocument6, { OnshapeStart } from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
 import { pageImages, renderPdfPages } from './pdfPages.js';
 import {
-  CAD_READY_MS, SAMPLE_PDF, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
+  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
 } from './model.js';
 import '../layoutBuilder/layout-builder.css';
 import '../../design-system/tokens.css';
@@ -202,18 +202,10 @@ export default function AiWorkflow6() {
       <>
         <OnshapeWorkspace
           parseSetup
-          cadTypes
-          onOpenDocument={(pending) => {
-            const imported = pending.origin === 'both';
-            createDoc({
-              name: pending.title,
-              cadName: pending.cadName,
-              cadSource: 'onshape',
-              start: imported ? 'import' : 'blank',
-              sourceName: imported ? (pending.sourceName || SAMPLE_PDF) : '',
-              source: imported ? { name: pending.sourceName || SAMPLE_PDF, sample: true } : null,
-            });
-          }}
+          renderStart={({ title, cadName }) => (
+            <OnshapeStart key={title} title={title} cadName={cadName} onCreate={createDoc} />
+          )}
+          onOpenDocument={() => {}}
         />
         <PrototypeSwitcher />
       </>

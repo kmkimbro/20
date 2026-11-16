@@ -31,6 +31,7 @@ const INSTANCES = [
 
 export default function OnshapeWorkspace({
   onOpenDocument, referenceCreate = false, onUseCad, parseSetup = false, cadTypes = false,
+  renderStart = null,
 }) {
   const [cadName, setCadName] = useState('');
   const [allowNew, setAllowNew] = useState(false);
@@ -86,6 +87,7 @@ export default function OnshapeWorkspace({
                 Documents
               </button>
               <p className="os-file">{detailTitle}</p>
+              {renderStart ? renderStart({ title: detailTitle, cadName }) : (
               <ParseSetup
                 embedded
                 cadTypes={cadTypes}
@@ -102,6 +104,7 @@ export default function OnshapeWorkspace({
                   planScope: detail.planScope,
                 })}
               />
+              )}
             </div>
           ) : creating ? (
             <div className="os-create">

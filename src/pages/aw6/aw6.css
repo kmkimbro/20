@@ -589,3 +589,8 @@
 /* Import tile doubles as the PDF drop zone, like the CAD upload. */
 .aw6-start-drop { min-height: 120px; color: var(--q20-color-primary); }
 .aw6-start-drop > strong { font-size: var(--q20-font-size-md); color: var(--q20-color-text); }
+
+/* The start step inside the narrow Onshape panel: tiles stack. */
+.aw6-os-start { display: flex; flex-direction: column; gap: var(--q20-space-3); margin-top: var(--q20-space-2); }
+.aw6-os-start .aw6-start-list { grid-template-columns: 1fr; }
+.aw6-os-start .aw6-or { justify-self: center; }
