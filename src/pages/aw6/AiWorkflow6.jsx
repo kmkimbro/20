@@ -28,7 +28,7 @@ function NavItem({ icon, label, active, nested, onClick }) {
 }
 
 function DocTile({ doc, project, onOpen, now }) {
-  const processing = (doc.cadName && now < (doc.cadReadyAt || 0)) || doc.importing;
+  const processing = now < (doc.cadReadyAt || 0) || doc.importing;
   return (
     <button type="button" className={`lb-doc-tile${processing ? ' is-uploading' : ''}`} onClick={() => onOpen(doc.id)}>
       <div className="lb-doc-tile-thumb">
@@ -37,13 +37,10 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {processing ? 'Creating document' : (
-            <>
-              {doc.start === 'import' ? 'Imported · ' : ''}
-              {project ? `${project} · ` : ''}
-              {`Created ${doc.created}`}
-            </>
-          )}
+          {now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
+          {doc.start === 'import' ? 'Imported · ' : ''}
+          {project ? `${project} · ` : ''}
+          {`Created ${doc.created}`}
         </div>
       </div>
     </button>
@@ -182,6 +179,12 @@ export default function AiWorkflow6() {
     setNow(Date.now());
     if (draft.start === 'import') runImport(id, draft.source, doc.cadReadyAt, Boolean(draft.cadName));
     if (openNow) openDoc(id);
+  };
+
+  // Both paths land on the project page while the CAD processes (and, for an import, while the PDF is brought in).
+  const createFromModal = (draft) => {
+    createDoc(draft, { openNow: false });
+    setView('project');
   };
 
   // From the Onshape panel, Done hands off to Quarter20: the project page shows the new document
@@ -346,7 +349,7 @@ export default function AiWorkflow6() {
         open={creating}
         cadLibrary={state.cadLibrary}
         onClose={() => setCreating(false)}
-        onCreate={createDoc}
+        onCreate={createFromModal}
       />
       <PrototypeSwitcher />
     </div>
