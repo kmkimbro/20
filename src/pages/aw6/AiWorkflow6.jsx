@@ -5,11 +5,13 @@ import {
 } from 'lucide-react';
 import Header from '../../components/Header.jsx';
 import PrototypeSwitcher from '../../components/PrototypeSwitcher.jsx';
+import OnshapeWorkspace from '../infer/OnshapeWorkspace.jsx';
+import '../infer/infer.css';
 import CreateDocument6 from './CreateDocument6.jsx';
 import Editor6 from './Editor6.jsx';
 import { pageImages, renderPdfPages } from './pdfPages.js';
 import {
-  CAD_READY_MS, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
+  CAD_READY_MS, SAMPLE_PDF, createdLabel, importedOperations, loadState, resetState, samplePages, saveState, uid,
 } from './model.js';
 import '../layoutBuilder/layout-builder.css';
 import '../../design-system/tokens.css';
@@ -61,6 +63,8 @@ export default function AiWorkflow6() {
   const [projectId, setProjectId] = useState('proj-1');
   const [librariesOpen, setLibrariesOpen] = useState(true);
   const [pluginsOpen, setPluginsOpen] = useState(false);
+  // The welcome screen picks where the person starts: in Onshape/SolidWorks or in Quarter20.
+  const [entry, setEntry] = useState(null);
 
   useEffect(() => { saveState(state); }, [state]);
 
@@ -175,6 +179,46 @@ export default function AiWorkflow6() {
   };
 
   const activeDoc = state.documents.find((doc) => doc.id === activeDocId);
+
+  if (!entry) {
+    return (
+      <div className="aw3-start">
+        <div className="aw3-start-card">
+          <h1>Start</h1>
+          <div className="aw3-start-actions">
+            <button type="button" onClick={() => setEntry('onshape')}>from onshape/SW</button>
+            {/* From Quarter20 lands on Home with the new Create a document modal open. */}
+            <button type="button" onClick={() => { setEntry('q20'); setCreating(true); }}>from q20</button>
+          </div>
+        </div>
+        <PrototypeSwitcher />
+      </div>
+    );
+  }
+
+  if (entry === 'onshape' && view !== 'document') {
+    // A document started from the Onshape panel opens in the same editor, with its CAD processing in the background.
+    return (
+      <>
+        <OnshapeWorkspace
+          parseSetup
+          cadTypes
+          onOpenDocument={(pending) => {
+            const imported = pending.origin === 'both';
+            createDoc({
+              name: pending.title,
+              cadName: pending.cadName,
+              cadSource: 'onshape',
+              start: imported ? 'import' : 'blank',
+              sourceName: imported ? (pending.sourceName || SAMPLE_PDF) : '',
+              source: imported ? { name: pending.sourceName || SAMPLE_PDF, sample: true } : null,
+            });
+          }}
+        />
+        <PrototypeSwitcher />
+      </>
+    );
+  }
 
   if (view === 'document' && activeDoc) {
     return (
