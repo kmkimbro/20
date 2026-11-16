@@ -28,7 +28,9 @@ function NavItem({ icon, label, active, nested, onClick }) {
 }
 
 function DocTile({ doc, project, onOpen, now }) {
-  const processing = now < (doc.cadReadyAt || 0) || doc.importing;
+  // An import moves through three card states on its own: Processing CAD, then Parsing document, then Complete.
+  const cadProcessing = now < (doc.cadReadyAt || 0);
+  const processing = cadProcessing || doc.importing;
   return (
     <button type="button" className={`lb-doc-tile${processing ? ' is-uploading' : ''}`} onClick={() => onOpen(doc.id)}>
       <div className="lb-doc-tile-thumb">
@@ -37,8 +39,7 @@ function DocTile({ doc, project, onOpen, now }) {
       <div className="lb-doc-tile-body">
         <div className="lb-doc-tile-name">{doc.name}</div>
         <div className="lb-doc-tile-sub">
-          {now < (doc.cadReadyAt || 0) ? `Processing ${doc.cadName} · ` : doc.importing ? 'Creating operation steps · ' : ''}
-          {doc.start === 'import' ? 'Imported · ' : ''}
+          {cadProcessing ? 'Processing CAD · ' : doc.importing ? 'Parsing document · ' : doc.start === 'import' ? 'Complete · ' : ''}
           {project ? `${project} · ` : ''}
           {`Created ${doc.created}`}
         </div>
@@ -98,7 +99,12 @@ export default function AiWorkflow6() {
     const alive = () => jobRef.current === run;
     const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
     const patchJob = (patch) => { if (alive()) setImportJob((job) => (job ? { ...job, ...patch } : job)); };
+    // 0 the CAD finishes processing, 1 upload the PDF pages, 2 make an operation step per page, 3 put the steps on the CAD, 4 done.
     setImportJob({ docId, sourceName: source.name, stage: 0, total: 0, made: 0, pages: [] });
+    const left = cadReadyAt - Date.now();
+    if (left > 0) await wait(left);
+    if (!alive()) return;
+    patchJob({ stage: 1 });
     let list = [];
     await wait(800);
     if (source.file) {
@@ -121,10 +127,6 @@ export default function AiWorkflow6() {
       await wait(300);
       patchJob({ total: list.length, pages: list.slice(0, i + 1) });
     }
-    if (!alive()) return;
-    patchJob({ stage: 1 });
-    const left = cadReadyAt - Date.now();
-    if (left > 0) await wait(left);
     if (!alive()) return;
     patchJob({ stage: 2 });
     const ops = importedOperations(list.length);

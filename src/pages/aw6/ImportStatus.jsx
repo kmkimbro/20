@@ -7,10 +7,10 @@ import { Box, Check, Loader2, X } from 'lucide-react';
 export default function ImportStatus({ job, cadName, cadReady, progress, onOpenCad, onDismiss }) {
   const done = job.stage >= 4;
   const hasCad = Boolean(cadName);
-  // Each line has the stage it belongs to: 0 upload, 1 CAD, 2 steps, 3 put on the CAD.
+  // Each line has the stage it belongs to: 0 CAD, 1 upload, 2 steps, 3 put on the CAD.
   const lines = [
-    { id: 'pages', stage: 0, label: job.total ? `Uploading ${job.sourceName} (${job.total} pages)` : `Uploading ${job.sourceName}` },
-    hasCad && { id: 'cad', stage: 1, label: cadReady ? `${cadName} is processed` : `Processing ${cadName} (${progress}%)` },
+    hasCad && { id: 'cad', stage: 0, label: cadReady ? `${cadName} is processed` : `Processing ${cadName} (${progress}%)` },
+    { id: 'pages', stage: 1, label: job.total ? `Uploading ${job.sourceName} (${job.total} pages)` : `Uploading ${job.sourceName}` },
     {
       id: 'ops',
       stage: 2,
@@ -32,13 +32,13 @@ export default function ImportStatus({ job, cadName, cadReady, progress, onOpenC
         ) : null}
       </header>
       <p className="aw6-guide-why">
-        {job.stage <= 1 && hasCad
+        {job.stage === 0 && hasCad
           ? `Your document stays empty while ${cadName} processes. Once the CAD is ready, each page becomes one operation step, kept exactly as it looks.`
           : `Each page of ${job.sourceName} becomes one operation step, kept exactly as it looks, so nothing is lost or reworded.`}
       </p>
       <ol className="aw6-walk-lines">
         {lines.map((line) => {
-          // The CAD processes alongside the upload, so its line tracks the CAD itself.
+          // The CAD line tracks the CAD itself.
           const state = line.id === 'cad'
             ? (cadReady ? 'done' : 'now')
             : line.stage < job.stage ? 'done' : line.stage === job.stage ? 'now' : 'todo';
