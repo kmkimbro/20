@@ -90,6 +90,7 @@ const F = [
   ['bl3', 'bl-open-cad', 'Click the card', 'CAD loading screen', 6, 0],
   ['bl4', 'bl-cad-ready', 'CAD ready', 'Document opens with the assistant: summary + prompts', 7, 0],
 
+  ['pr1', 'prompts', 'Assistant · suggested prompts', 'Team prompts grouped by category, below the samples', 7, 1],
   ['im1', 'im-picked', 'Import a document', 'PDF attached · Import', 4, 2],
   ['im2', 'im-card-cad', 'Card · Processing CAD', 'First stage, about 15s', 5, 2],
   ['im3', 'im-card-parse', 'Card · Parsing document', 'Starts once the CAD is ready', 6, 2],
@@ -111,7 +112,7 @@ const E = [
   ['s2','bl1'],['s2','im1'],
   ['bl1','bl2'],['bl2','bl3'],['bl3','bl4'],
   ['im1','im2'],['im2','im3'],['im3','im4'],
-  ['im2','im2o','down'],['im3','im3o','down'],['im4','im4o','down'],
+  ['bl4','pr1','down','scroll the panel'],['im2','im2o','down'],['im3','im3o','down'],['im4','im4o','down'],
   ['start','os1','alt'],['os1','os2'],['os2','os3'],['os3','os4'],['os4','os5'],['os5','os6'],['os6','os7'],
 ];
 
@@ -147,7 +148,7 @@ svg.setAttribute('width', W); svg.setAttribute('height', H);
 svg.innerHTML = `<defs>
   <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--arrow)"/></marker>
   <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--branch)"/></marker></defs>`;
-E.forEach(([a, b, kind]) => {
+E.forEach(([a, b, kind, label]) => {
   const A = byId[a], B = byId[b];
   let d;
   if (kind === 'alt') {
@@ -156,7 +157,7 @@ E.forEach(([a, b, kind]) => {
   } else if (kind === 'down') {
     const x = A.x + FW / 2, y1 = A.y + FH + 8, y2 = B.y - 44;
     d = `M${x} ${y1} V${y2}`;
-    addEl('chip', x, (y1 + y2) / 2, 'click card');
+    addEl('chip', x, (y1 + y2) / 2, label || 'click card');
   } else {
     const x1 = A.x + FW + 8, y1 = A.y + FH / 2, x2 = B.x - 14, y2 = B.y + FH / 2;
     if (Math.abs(y1 - y2) < 1) d = `M${x1} ${y1} H${x2}`;

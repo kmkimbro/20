@@ -53,6 +53,48 @@ const IMPORT_STARTERS = [
   },
 ];
 
+// Standard prompts from the team's AI prompts brainstorm, grouped by its categories and reworded.
+const PROMPT_LIBRARY = [
+  { id: 'generate', label: 'Generate', prompts: [
+    'Make a disassembly copy of this document by reversing the order of the operations.',
+    'Generate a parts catalog from this document.',
+    'Add detail views for very small parts in the screenshots.',
+    'Where a sub-operation repeats, note how many times to repeat it.',
+  ] },
+  { id: 'modify', label: 'Modify', prompts: [
+    'Translate this document into Spanish.',
+    'Use part numbers instead of part names in every label, text box and arrow.',
+    'Make a portrait copy of this document and refit each page.',
+    'Use this document as the baseline for a new configuration in its own project, and highlight what changed.',
+  ] },
+  { id: 'cad', label: 'CAD and assembly tree', prompts: [
+    'Group compound parts together in the assembly tree.',
+    'Rename vague part names to short names an engineer would recognize.',
+  ] },
+  { id: 'compliance', label: 'Compliance', prompts: [
+    'Check this document against a safety requirements PDF and list any gaps, with suggested fixes.',
+    'Review this document for FDA Class II medical device compliance.',
+    'Find errors or tool issues in this document and cite the rule behind each one.',
+  ] },
+  { id: 'library', label: 'Library and standards', prompts: [
+    'Turn any instruction repeated 3 or more times into a reusable procedure.',
+    'Match this document\'s formatting to a template.',
+    'Create template placeholders for the next operation from the last 3 operations.',
+  ] },
+  { id: 'review', label: 'Review', prompts: [
+    'Summarize what changed between versions of this document in a table.',
+    'Summarize what changed between versions of the CAD in a table.',
+    'Find the pages that need engineering approval, tag the approver and ask them to sign off.',
+    'Mark every page that uses a given part.',
+  ] },
+  { id: 'insights', label: 'Insights', prompts: [
+    'If I swap one bolt for another, which pages need updating?',
+    'Use technician mode data to find the slowest steps and improve them.',
+    'Review these operations as a mechanical engineer and suggest improvements.',
+    'Reorder the operations to cut assembly time and cost.',
+  ] },
+];
+
 function intentOf(text) {
   const value = text.toLowerCase();
   if (/work instruction/.test(value)) return 'wi';
@@ -87,6 +129,7 @@ export default function AssistPanel({
   const [starter, setStarter] = useState(null);
   const [busy, setBusy] = useState(false);
   const [guideOpen, setGuideOpen] = useState(true);
+  const [libraryTab, setLibraryTab] = useState(PROMPT_LIBRARY[0].id);
   const inputRef = useRef(null);
   const endRef = useRef(null);
   const messages = doc.messages || [];
@@ -101,6 +144,12 @@ export default function AssistPanel({
   }, [messages.length, busy]);
 
   const apply = (intent) => {
+    if (intent && intent.startsWith('lib-')) {
+      return {
+        patch: {},
+        reply: 'This is one of the standard prompts planned for the AI rollout. The prototype shows where it lives, but does not run it yet.',
+      };
+    }
     const ops = doc.operations;
     if (intent === 'wi') {
       const allEmpty = ops.every((op) => op.kind === 'empty');
@@ -370,6 +419,42 @@ export default function AssistPanel({
                 </button>
               );
             })}
+          </section>
+        ) : null}
+        {(nav === 'doc' || blank) && !(importJob && importJob.stage < 4) ? (
+          <section className="aw6-starters aw6-library">
+            <div className="aw6-section-label">Suggested prompts</div>
+            <div className="aw6-library-tabs" role="tablist" aria-label="Prompt categories">
+              {PROMPT_LIBRARY.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={libraryTab === group.id}
+                  className={`aw6-library-tab${libraryTab === group.id ? ' is-active' : ''}`}
+                  onClick={() => setLibraryTab(group.id)}
+                >
+                  {group.label}
+                </button>
+              ))}
+            </div>
+            <div className="aw6-library-list" role="tabpanel">
+              {PROMPT_LIBRARY.find((group) => group.id === libraryTab).prompts.map((prompt, index) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="aw6-library-prompt"
+                  disabled={busy}
+                  onClick={() => {
+                    setText(prompt);
+                    setStarter({ id: `lib-${libraryTab}-${index}`, prompt });
+                    inputRef.current?.focus();
+                  }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </section>
         ) : null}
         {messages.length || busy ? (
