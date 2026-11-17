@@ -88,9 +88,9 @@ const F = [
   ['bl1', 'bl-picked', 'Blank document', 'Selected · Create document', 4, 0],
   ['bl2', 'bl-card-cad', 'Project card', 'Processing CAD', 5, 0],
   ['bl3', 'bl-open-cad', 'Click the card', 'CAD loading screen', 6, 0],
-  ['bl4', 'bl-cad-ready', 'CAD ready', 'Document opens with the assistant: summary + prompts', 7, 0],
+  ['bl4', 'bl-cad-ready', 'CAD ready', 'Document opens with the assistant: summary + suggested prompts', 7, 0],
 
-  ['pr1', 'prompts', 'Assistant · suggested prompts', 'Team prompts grouped by category, below the samples', 7, 1],
+  ['pr1', 'prompts', 'Assistant · suggested prompts', 'Team prompts grouped by category', 7, 1],
   ['im1', 'im-picked', 'Import a document', 'PDF attached · Import', 4, 2],
   ['im2', 'im-card-cad', 'Card · Processing CAD', 'First stage, about 15s', 5, 2],
   ['im3', 'im-card-parse', 'Card · Parsing document', 'Starts once the CAD is ready', 6, 2],
@@ -137,7 +137,7 @@ addEl('lane', OX + CW, OY + 5 * RH - 150, 'Start in Onshape / SolidWorks<small>U
 addEl('note', OX + 8 * CW, OY + 2 * RH + 20,
   '<b>Import card stages</b>Processing CAD → Parsing document → Complete. The card advances by itself; clicking it at any stage opens what is shown below that stage.', 420);
 addEl('note', OX + 8 * CW, OY + 20,
-  '<b>Blank document</b>Only an explicit Blank pick starts blank. Anything else, including no pick, runs the import with the sample PDF. Once the CAD is ready, the document opens with the assistant showing what happened, the next step, and sample prompts.', 420);
+  '<b>Blank document</b>Only an explicit Blank pick starts blank. Anything else, including no pick, runs the import with the sample PDF. Once the CAD is ready, the document opens with the assistant showing what happened, the next step, and suggested prompts.', 420);
 addEl('note', OX + 8 * CW, OY + 5 * RH + 20,
   '<b>Done opens a new tab</b>In the real product, Done opens Quarter20 in a new browser tab. The prototype stays in one tab. From the project card, the import continues with the same three card stages as above.', 420);
 

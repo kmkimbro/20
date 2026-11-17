@@ -135,7 +135,6 @@ export default function AssistPanel({
   const messages = doc.messages || [];
   const imported = doc.start === 'import';
   const blank = doc.start === 'blank';
-  const starters = imported ? IMPORT_STARTERS : BLANK_STARTERS;
   const hasCadContent = doc.operations.some((op) => op.shot != null);
   const opCount = doc.operations.length;
 
@@ -393,34 +392,6 @@ export default function AssistPanel({
         ) : null}
         {cadCard}
         {blank || (importJob && nav === 'doc') ? null : guide}
-        {(nav === 'doc' || blank) && !(importJob && importJob.stage < 4) ? (
-          <section className="aw6-starters">
-            <div className="aw6-section-label">{imported ? 'Finish from your CAD' : 'Build from your CAD'}</div>
-            {!cadReady ? (
-              <p className="aw6-muted">
-                These use the model, so they unlock when the CAD is ready.
-              </p>
-            ) : null}
-            {starters.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="aw6-starter"
-                  disabled={!cadReady || busy}
-                  onClick={() => { setText(item.prompt); setStarter(item); inputRef.current?.focus(); }}
-                >
-                  <span className="aw6-starter-icon" aria-hidden="true"><Icon size={15} /></span>
-                  <span>
-                    <strong>{item.title}</strong>
-                    <span>{item.detail}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </section>
-        ) : null}
         {(nav === 'doc' || blank) && !(importJob && importJob.stage < 4) ? (
           <section className="aw6-starters aw6-library">
             <div className="aw6-section-label">Suggested prompts</div>
